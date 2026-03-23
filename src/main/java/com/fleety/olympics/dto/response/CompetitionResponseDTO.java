@@ -4,9 +4,11 @@ import java.time.LocalDate;
 
 import com.fleety.olympics.model.Competition.StatusCompetition;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
+@AllArgsConstructor
 public class CompetitionResponseDTO {
 
     private Long id;

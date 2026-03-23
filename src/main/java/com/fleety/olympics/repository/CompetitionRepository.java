@@ -11,4 +11,5 @@ import com.fleety.olympics.model.Competition;
 public interface CompetitionRepository extends JpaRepository<Competition, Long> {
     List<Competition> findByStatut(Competition.StatusCompetition statut);
     List<Competition> findByDiscipline(String discipline);
+    boolean existsByNom(String nom);
 }

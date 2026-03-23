@@ -4,9 +4,11 @@ import java.time.LocalDate;
 
 import com.fleety.olympics.model.Medaille.TypeMedaille;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
+@AllArgsConstructor
 public class MedailleResponseDTO {
 
     private Long id;
