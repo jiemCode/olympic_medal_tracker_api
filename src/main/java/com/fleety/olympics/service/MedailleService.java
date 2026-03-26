@@ -7,6 +7,8 @@ import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.*;
 import com.fleety.olympics.model.Medaille.TypeMedaille;
 import com.fleety.olympics.repository.*;
+import com.fleety.olympics.strategy.TriStrategy;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,7 @@ public class MedailleService {
     private final AthleteRepository athleteRepository;
     private final PaysRepository paysRepository;
     private final CompetitionRepository competitionRepository;
+    private final Map<String, TriStrategy> triStrategies;  // Injection des méthodes de tri
 
     public List<MedailleResponseDTO> getAll() {
         return medailleRepository.findAll().stream()
@@ -102,15 +105,9 @@ public class MedailleService {
                 .collect(Collectors.toList());
 
         // Tri
-        Comparator<ClassementResponseDTO> comparator = switch (tri == null ? "total" : tri) {
-            case "or"     -> Comparator.comparingLong(ClassementResponseDTO::getOr).reversed();
-            case "argent" -> Comparator.comparingLong(ClassementResponseDTO::getArgent).reversed();
-            case "bronze" -> Comparator.comparingLong(ClassementResponseDTO::getBronze).reversed();
-            case "points" -> Comparator.comparingLong(ClassementResponseDTO::getPoints).reversed();
-            default       -> Comparator.comparingLong(ClassementResponseDTO::getTotal).reversed();
-        };
-
-        classement.sort(comparator);
+        TriStrategy strategy = triStrategies.getOrDefault(tri, triStrategies.get("total"));
+        classement.sort(strategy.comparator());
+        
         return classement;
     }
 
