@@ -11,6 +11,6 @@ public class TriParOr implements TriStrategy {
 
     @Override
     public Comparator<ClassementResponseDTO> comparator() {
-        return Comparator.comparingLong(ClassementResponseDTO::getOr);
+        return Comparator.comparingLong(ClassementResponseDTO::getOr).reversed();
     }
 }

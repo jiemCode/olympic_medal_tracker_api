@@ -11,6 +11,6 @@ public class TriParArgent implements TriStrategy {
     
     @Override
     public Comparator<ClassementResponseDTO> comparator() {
-        return Comparator.comparingLong(ClassementResponseDTO::getArgent);
+        return Comparator.comparingLong(ClassementResponseDTO::getArgent).reversed();
     }
 }
