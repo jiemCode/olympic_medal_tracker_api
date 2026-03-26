@@ -2,7 +2,9 @@ package com.fleety.olympics.controller;
 
 import com.fleety.olympics.dto.request.CompetitionRequestDTO;
 import com.fleety.olympics.dto.response.CompetitionResponseDTO;
-import com.fleety.olympics.service.CompetitionService;
+import com.fleety.olympics.service.interfaces.ReadableService;
+import com.fleety.olympics.service.interfaces.WritableService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -15,32 +17,34 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CompetitionController {
 
-    private final CompetitionService competitionService;
+    private final ReadableService<CompetitionResponseDTO> readableService;
+    private final WritableService<CompetitionResponseDTO, CompetitionRequestDTO> writableService;
+
 
     @GetMapping
     public List<CompetitionResponseDTO> getAll() {
-        return competitionService.getAll();
+        return readableService.getAll();
     }
 
     @GetMapping("/{id}")
     public CompetitionResponseDTO getById(@PathVariable Long id) {
-        return competitionService.getById(id);
+        return readableService.getById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CompetitionResponseDTO create(@Valid @RequestBody CompetitionRequestDTO dto) {
-        return competitionService.create(dto);
+        return writableService.create(dto);
     }
 
     @PutMapping("/{id}")
     public CompetitionResponseDTO update(@PathVariable Long id, @Valid @RequestBody CompetitionRequestDTO dto) {
-        return competitionService.update(id, dto);
+        return writableService.update(id, dto);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
-        competitionService.delete(id);
+        writableService.delete(id);
     }
 }

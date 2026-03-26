@@ -6,6 +6,9 @@ import com.fleety.olympics.exception.DuplicateResourceException;
 import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.Competition;
 import com.fleety.olympics.repository.CompetitionRepository;
+import com.fleety.olympics.service.interfaces.ReadableService;
+import com.fleety.olympics.service.interfaces.WritableService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +16,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class CompetitionService {
+public class CompetitionService implements ReadableService<CompetitionResponseDTO>, WritableService<CompetitionResponseDTO, CompetitionRequestDTO> {
 
     private final CompetitionRepository competitionRepository;
 

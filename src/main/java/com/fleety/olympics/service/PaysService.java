@@ -10,12 +10,14 @@ import com.fleety.olympics.exception.DuplicateResourceException;
 import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.Pays;
 import com.fleety.olympics.repository.PaysRepository;
+import com.fleety.olympics.service.interfaces.ReadableService;
+import com.fleety.olympics.service.interfaces.WritableService;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class PaysService {
+public class PaysService implements ReadableService<PaysResponseDTO>, WritableService<PaysResponseDTO, PaysRequestDTO> {
 
     private final PaysRepository paysRepository;
 
@@ -26,7 +28,7 @@ public class PaysService {
                 .toList();
     }
 
-    public PaysResponseDTO getPaysById(Long id) {
+    public PaysResponseDTO getById(Long id) {
         Pays pays = paysRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pays non trouvé avec l'id: " + id));
         return toResponseDTO(pays);

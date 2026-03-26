@@ -7,6 +7,10 @@ import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.*;
 import com.fleety.olympics.model.Medaille.TypeMedaille;
 import com.fleety.olympics.repository.*;
+import com.fleety.olympics.service.interfaces.Classifiable;
+import com.fleety.olympics.service.interfaces.MedailleFilterable;
+import com.fleety.olympics.service.interfaces.ReadableService;
+import com.fleety.olympics.service.interfaces.WritableService;
 import com.fleety.olympics.strategy.TriStrategy;
 
 import lombok.RequiredArgsConstructor;
@@ -17,7 +21,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class MedailleService {
+public class MedailleService implements ReadableService<MedailleResponseDTO>, WritableService<MedailleResponseDTO, MedailleRequestDTO>, Classifiable, MedailleFilterable{
 
     private final MedailleRepository medailleRepository;
     private final AthleteRepository athleteRepository;
@@ -62,6 +66,25 @@ public class MedailleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Compétition non trouvée avec l'id: " + dto.getCompetitionId()));
 
         Medaille medaille = new Medaille();
+        medaille.setType(dto.getType());
+        medaille.setDateObtention(dto.getDateObtention());
+        medaille.setAthlete(athlete);
+        medaille.setPays(pays);
+        medaille.setCompetition(competition);
+
+        return toResponseDTO(medailleRepository.save(medaille));
+    }
+
+    public MedailleResponseDTO update(Long id, MedailleRequestDTO dto) {
+        Medaille medaille = findOrThrow(id);
+
+        Athlete athlete = athleteRepository.findById(dto.getAthleteId())
+                .orElseThrow(() -> new ResourceNotFoundException("Athlète non trouvé avec l'id: " + dto.getAthleteId()));
+        Pays pays = paysRepository.findById(dto.getPaysId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pays non trouvé avec l'id: " + dto.getPaysId()));
+        Competition competition = competitionRepository.findById(dto.getCompetitionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Compétition non trouvée avec l'id: " + dto.getCompetitionId()));
+
         medaille.setType(dto.getType());
         medaille.setDateObtention(dto.getDateObtention());
         medaille.setAthlete(athlete);

@@ -7,6 +7,10 @@ import com.fleety.olympics.model.Athlete;
 import com.fleety.olympics.model.Pays;
 import com.fleety.olympics.repository.AthleteRepository;
 import com.fleety.olympics.repository.PaysRepository;
+import com.fleety.olympics.service.interfaces.Filterable;
+import com.fleety.olympics.service.interfaces.ReadableService;
+import com.fleety.olympics.service.interfaces.WritableService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +18,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class AthleteService {
+public class AthleteService implements ReadableService<AthleteResponseDTO>, WritableService<AthleteResponseDTO, AthleteRequestDTO>, Filterable<AthleteResponseDTO> {
 
     private final AthleteRepository athleteRepository;
     private final PaysRepository paysRepository;
