@@ -181,6 +181,72 @@ class AthleteServiceTest {
     }
 
     @Nested
+    @DisplayName("update()")
+    class Update {
+
+        @Test
+        @DisplayName("doit mettre à jour l'athlète quand il existe et le pays aussi")
+        void shouldUpdateAthlete_whenBothExist() {
+            Pays nouveauPays = Pays.builder()
+                    .id(2L).nom("USA").code("USA").drapeau("🇺🇸")
+                    .build();
+
+            Athlete athleteMisAJour = Athlete.builder()
+                    .id(1L)
+                    .nom("Diallo").prenom("Moussa")
+                    .dateNaissance(LocalDate.of(2000, 1, 1))
+                    .discipline("100m")
+                    .pays(nouveauPays)
+                    .build();
+
+            AthleteRequestDTO updateDTO = new AthleteRequestDTO();
+            updateDTO.setNom("Diallo");
+            updateDTO.setPrenom("Moussa");
+            updateDTO.setDateNaissance(LocalDate.of(2000, 1, 1));
+            updateDTO.setDiscipline("100m");
+            updateDTO.setPaysId(2L);
+
+            when(athleteRepository.findById(1L)).thenReturn(Optional.of(athlete));
+            when(paysRepository.findById(2L)).thenReturn(Optional.of(nouveauPays));
+            when(athleteRepository.save(athlete)).thenReturn(athleteMisAJour);
+
+            AthleteResponseDTO result = athleteService.update(1L, updateDTO);
+
+            assertThat(result.getNom()).isEqualTo("Diallo");
+            assertThat(result.getPrenom()).isEqualTo("Moussa");
+            assertThat(result.getDiscipline()).isEqualTo("100m");
+            assertThat(result.getPaysCode()).isEqualTo("USA");
+            verify(athleteRepository).save(athlete);
+        }
+
+        @Test
+        @DisplayName("doit lever ResourceNotFoundException si l'athlète n'existe pas")
+        void shouldThrow_whenAthleteNotFound() {
+            when(athleteRepository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> athleteService.update(99L, requestDTO))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("99");
+
+            verify(athleteRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("doit lever ResourceNotFoundException si le pays n'existe pas")
+        void shouldThrow_whenPaysNotFound() {
+            requestDTO.setPaysId(99L);
+            when(athleteRepository.findById(1L)).thenReturn(Optional.of(athlete));
+            when(paysRepository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> athleteService.update(1L, requestDTO))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("99");
+
+            verify(athleteRepository, never()).save(any());
+        }
+    }
+
+    @Nested
     @DisplayName("delete()")
     class Delete {
 
