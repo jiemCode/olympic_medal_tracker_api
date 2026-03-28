@@ -8,10 +8,14 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.fleety.olympics.dto.response.ClassementResponseDTO;
 
 @DisplayName("TriStrategy — Tests Unitaires")
+@SpringBootTest
+@ActiveProfiles("test")
 class TriStrategyTest {
 
     private ClassementResponseDTO buildDTO(String code, long or, long argent, long bronze) {

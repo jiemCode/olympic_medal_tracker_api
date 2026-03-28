@@ -22,14 +22,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fleety.olympics.dto.request.CompetitionRequestDTO;
 import com.fleety.olympics.dto.response.CompetitionResponseDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.exception.DuplicateResourceException;
 import com.fleety.olympics.exception.GlobalExceptionHandler;
 import com.fleety.olympics.exception.ResourceNotFoundException;
@@ -42,6 +46,7 @@ import tools.jackson.databind.ObjectMapper;
 @WebMvcTest(CompetitionController.class)
 @Import(GlobalExceptionHandler.class)
 @DisplayName("CompetitionController — Tests d'Intégration")
+@ActiveProfiles("test")
 class CompetitionControllerTest {
 
     @Autowired
@@ -84,25 +89,55 @@ class CompetitionControllerTest {
         @DisplayName("doit retourner 200 avec la liste des compétitions")
         void shouldReturn200_withCompetitionsList() throws Exception {
 
-            when(readableService.getAll()).thenReturn(List.of(responseDTO));
+            PageResponseDTO<CompetitionResponseDTO> pageResponse = new PageResponseDTO<>(
+                    List.of(responseDTO),
+                    0,
+                    1,
+                    1L,
+                    10,
+                    true,
+                    true
+            );
+
+            when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
 
             mockMvc.perform(get("/api/v1/competitions"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$").isArray())
-                    .andExpect(jsonPath("$[0].nom").value("100m Hommes"))
-                    .andExpect(jsonPath("$[0].discipline").value("Athlétisme"))
-                    .andExpect(jsonPath("$[0].statut").value("PLANIFIEE"));
+                    .andExpect(jsonPath("$.contenu[0].nom").value("100m Hommes"))
+                    .andExpect(jsonPath("$.contenu[0].discipline").value("Athlétisme"))
+                    .andExpect(jsonPath("$.contenu[0].statut").value("PLANIFIEE"))
+                    .andExpect(jsonPath("$.pageActuelle").value(0))
+                    .andExpect(jsonPath("$.totalPages").value(1))
+                    .andExpect(jsonPath("$.totalElements").value(1))
+                    .andExpect(jsonPath("$.premiere").value(true))
+                    .andExpect(jsonPath("$.derniere").value(true));;
         }
 
         @Test
         @DisplayName("doit retourner 200 avec une liste vide")
         void shouldReturn200_withEmptyList() throws Exception {
 
-            when(readableService.getAll()).thenReturn(List.of());
+            PageResponseDTO<CompetitionResponseDTO> pageResponse = new PageResponseDTO<>(
+                    List.of(),
+                    0,
+                    1,
+                    0,
+                    10,
+                    true,
+                    true
+            );
+
+            when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
 
             mockMvc.perform(get("/api/v1/competitions"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$").isEmpty());
+                    .andExpect(jsonPath("$.contenu").isEmpty())
+                    .andExpect(jsonPath("$.pageActuelle").value(0))
+                    .andExpect(jsonPath("$.totalPages").value(1))
+                    .andExpect(jsonPath("$.totalElements").value(0))
+                    .andExpect(jsonPath("$.taillePage").value(10))
+                    .andExpect(jsonPath("$.premiere").value(true))
+                    .andExpect(jsonPath("$.derniere").value(true));
         }
     }
 

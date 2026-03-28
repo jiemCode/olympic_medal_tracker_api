@@ -1,10 +1,10 @@
 package com.fleety.olympics.service;
 
-import java.util.List;
-
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.fleety.olympics.dto.request.PaysRequestDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.dto.response.PaysResponseDTO;
 import com.fleety.olympics.exception.DuplicateResourceException;
 import com.fleety.olympics.exception.ResourceNotFoundException;
@@ -21,11 +21,10 @@ public class PaysService implements ReadableService<PaysResponseDTO>, WritableSe
 
     private final PaysRepository paysRepository;
 
-    public List<PaysResponseDTO> getAll() {
-        return paysRepository.findAll()
-                .stream()
-                .map(this::toResponseDTO)
-                .toList();
+    public PageResponseDTO<PaysResponseDTO> getAll(Pageable pageable) {
+        return PageResponseDTO.from(
+            paysRepository.findAll(pageable).map(this::toResponseDTO)
+        );
     }
 
     public PaysResponseDTO getById(Long id) {

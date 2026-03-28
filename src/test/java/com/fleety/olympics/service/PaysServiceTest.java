@@ -19,8 +19,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.fleety.olympics.dto.request.PaysRequestDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.dto.response.PaysResponseDTO;
 import com.fleety.olympics.exception.DuplicateResourceException;
 import com.fleety.olympics.exception.ResourceNotFoundException;
@@ -30,6 +37,7 @@ import com.fleety.olympics.repository.PaysRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PaysService — Tests Unitaires")
+@ActiveProfiles("test")
 class PaysServiceTest {
 
     @Mock
@@ -64,27 +72,35 @@ class PaysServiceTest {
         @Test
         @DisplayName("doit retourner la liste de tous les pays")
         void shouldReturnAllPays() {
-
             Pays pays2 = Pays.builder().id(2L).nom("France").code("FRA").drapeau("🇫🇷").build();
-            when(paysRepository.findAll()).thenReturn(List.of(pays, pays2));
+            Page<Pays> page = new PageImpl<>(List.of(pays, pays2));
 
-            List<PaysResponseDTO> result = paysService.getAll();
+            when(paysRepository.findAll(any(Pageable.class)))
+                    .thenReturn(page);
 
-            assertThat(result).hasSize(2);
-            assertThat(result.get(0).getNom()).isEqualTo("Sénégal");
-            assertThat(result.get(1).getNom()).isEqualTo("France");
-            verify(paysRepository, times(1)).findAll();
+            PageResponseDTO<PaysResponseDTO> result =
+                    paysService.getAll(PageRequest.of(0, 10));
+
+            assertThat(result.getContenu()).hasSize(2);
+            assertThat(result.getContenu().get(0).getNom()).isEqualTo("Sénégal");
+            assertThat(result.getContenu().get(1).getNom()).isEqualTo("France");
+            assertThat(result.getTotalElements()).isEqualTo(2);
+            verify(paysRepository, times(1)).findAll(any(Pageable.class));
         }
 
         @Test
         @DisplayName("doit retourner une liste vide si aucun pays")
         void shouldReturnEmptyList() {
 
-            when(paysRepository.findAll()).thenReturn(List.of());
+            Page<Pays> page = new PageImpl<>(List.of());
 
-            List<PaysResponseDTO> result = paysService.getAll();
+            when(paysRepository.findAll(any(Pageable.class)))
+                    .thenReturn(page);
 
-            assertThat(result).isEmpty();
+            PageResponseDTO<PaysResponseDTO> result =
+                    paysService.getAll(PageRequest.of(0, 10));
+
+            assertThat(result.getContenu()).isEmpty();
         }
     }
 

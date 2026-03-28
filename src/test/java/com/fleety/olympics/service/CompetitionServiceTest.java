@@ -20,9 +20,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.fleety.olympics.dto.request.CompetitionRequestDTO;
 import com.fleety.olympics.dto.response.CompetitionResponseDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.exception.DuplicateResourceException;
 import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.Competition;
@@ -32,6 +39,7 @@ import com.fleety.olympics.repository.CompetitionRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CompetitionService — Tests Unitaires")
+@ActiveProfiles("test")
 class CompetitionServiceTest {
 
     @Mock
@@ -77,26 +85,36 @@ class CompetitionServiceTest {
                     .dateFin(LocalDate.of(2026, 7, 28))
                     .statut(StatusCompetition.EN_COURS)
                     .build();
-            when(competitionRepository.findAll()).thenReturn(List.of(competition, c2));
+            Page<Competition> page = new PageImpl<>(List.of(competition, c2));
 
-            List<CompetitionResponseDTO> result = competitionService.getAll();
+            when(competitionRepository.findAll(any(Pageable.class)))
+                    .thenReturn(page);
 
-            assertThat(result).hasSize(2);
-            assertThat(result.get(0).getNom()).isEqualTo("100m Hommes");
-            assertThat(result.get(1).getNom()).isEqualTo("50m Nage Libre");
-            verify(competitionRepository, times(1)).findAll();
+            PageResponseDTO<CompetitionResponseDTO> result =
+                    competitionService.getAll(PageRequest.of(0, 10));
+
+
+            assertThat(result.getContenu()).hasSize(2);
+            assertThat(result.getContenu().get(0).getNom()).isEqualTo("100m Hommes");
+            assertThat(result.getContenu().get(1).getNom()).isEqualTo("50m Nage Libre");
+            assertThat(result.getTotalElements()).isEqualTo(2);
+            verify(competitionRepository, times(1)).findAll(any(Pageable.class));
         }
 
         @Test
         @DisplayName("doit retourner une liste vide si aucune compétition")
         void shouldReturnEmptyList() {
 
-            when(competitionRepository.findAll()).thenReturn(List.of());
+            Page<Competition> page = new PageImpl<>(List.of());
 
-            List<CompetitionResponseDTO> result = competitionService.getAll();
+            when(competitionRepository.findAll(any(Pageable.class)))
+                    .thenReturn(page);
 
-            assertThat(result).isEmpty();
-            verify(competitionRepository, times(1)).findAll();
+            PageResponseDTO<CompetitionResponseDTO> result =
+                    competitionService.getAll(PageRequest.of(0, 10));
+
+            assertThat(result.getContenu()).isEmpty();
+            verify(competitionRepository, times(1)).findAll(any(Pageable.class));
         }
     }
 

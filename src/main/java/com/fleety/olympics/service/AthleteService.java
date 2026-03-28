@@ -1,7 +1,13 @@
 package com.fleety.olympics.service;
 
+import java.util.List;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
 import com.fleety.olympics.dto.request.AthleteRequestDTO;
 import com.fleety.olympics.dto.response.AthleteResponseDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.Athlete;
 import com.fleety.olympics.model.Pays;
@@ -12,9 +18,6 @@ import com.fleety.olympics.service.interfaces.ReadableService;
 import com.fleety.olympics.service.interfaces.WritableService;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,10 +26,10 @@ public class AthleteService implements ReadableService<AthleteResponseDTO>, Writ
     private final AthleteRepository athleteRepository;
     private final PaysRepository paysRepository;
 
-    public List<AthleteResponseDTO> getAll() {
-        return athleteRepository.findAll().stream()
-                .map(this::toResponseDTO)
-                .toList();
+    public PageResponseDTO<AthleteResponseDTO> getAll(Pageable pageable) {
+        return PageResponseDTO.from(
+            athleteRepository.findAll(pageable).map(this::toResponseDTO)
+        );
     }
 
     public AthleteResponseDTO getById(Long id) {

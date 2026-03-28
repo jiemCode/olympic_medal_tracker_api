@@ -21,15 +21,19 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fleety.olympics.dto.request.MedailleRequestDTO;
 import com.fleety.olympics.dto.response.ClassementResponseDTO;
 import com.fleety.olympics.dto.response.MedailleResponseDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.exception.GlobalExceptionHandler;
 import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.Medaille.TypeMedaille;
@@ -43,6 +47,7 @@ import tools.jackson.databind.ObjectMapper;
 @WebMvcTest(MedailleController.class)
 @Import(GlobalExceptionHandler.class)
 @DisplayName("MedailleController — Tests d'Intégration")
+@ActiveProfiles("test")
 class MedailleControllerTest {
 
     @Autowired
@@ -91,13 +96,28 @@ class MedailleControllerTest {
         @DisplayName("doit retourner 200 avec la liste des médailles")
         void shouldReturn200_withMedaillesList() throws Exception {
 
-            when(readableService.getAll()).thenReturn(List.of(medailleDTO));
+            PageResponseDTO<MedailleResponseDTO> pageResponse = new PageResponseDTO<>(
+                    List.of(medailleDTO),
+                    0,
+                    1,
+                    1L,
+                    10,
+                    true,
+                    true
+            );
+
+            when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
 
             mockMvc.perform(get("/api/v1/medailles"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].type").value("OR"))
-                    .andExpect(jsonPath("$[0].paysNom").value("Sénégal"))
-                    .andExpect(jsonPath("$[0].competitionNom").value("Lutte 65kg"));
+                    .andExpect(jsonPath("$.contenu[0].type").value("OR"))
+                    .andExpect(jsonPath("$.contenu[0].paysNom").value("Sénégal"))
+                    .andExpect(jsonPath("$.contenu[0].competitionNom").value("Lutte 65kg"))
+                    .andExpect(jsonPath("$.pageActuelle").value(0))
+                    .andExpect(jsonPath("$.totalPages").value(1))
+                    .andExpect(jsonPath("$.totalElements").value(1))
+                    .andExpect(jsonPath("$.premiere").value(true))
+                    .andExpect(jsonPath("$.derniere").value(true));
         }
     }
 

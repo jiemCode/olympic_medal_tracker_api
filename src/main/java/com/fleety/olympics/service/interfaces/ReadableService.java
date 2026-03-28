@@ -1,8 +1,10 @@
 package com.fleety.olympics.service.interfaces;
 
-import java.util.List;
+import org.springframework.data.domain.Pageable;
+
+import com.fleety.olympics.dto.response.PageResponseDTO;
 
 public interface ReadableService<T> {
-    List<T> getAll();
+    PageResponseDTO<T> getAll(Pageable pageable);
     T getById(Long id);
 }

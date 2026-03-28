@@ -1,7 +1,25 @@
 package com.fleety.olympics.controller;
 
+import java.util.List;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.fleety.olympics.dto.request.AthleteRequestDTO;
 import com.fleety.olympics.dto.response.AthleteResponseDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.service.interfaces.Filterable;
 import com.fleety.olympics.service.interfaces.ReadableService;
 import com.fleety.olympics.service.interfaces.WritableService;
@@ -9,13 +27,8 @@ import com.fleety.olympics.service.interfaces.WritableService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/v1/athletes")
+@RequestMapping("${api.version}/athletes")
 @RequiredArgsConstructor
 public class AthleteController {
 
@@ -24,8 +37,18 @@ public class AthleteController {
     private final Filterable<AthleteResponseDTO> filterable;
 
     @GetMapping
-    public List<AthleteResponseDTO> getAll() {
-        return readableService.getAll();
+    public PageResponseDTO<AthleteResponseDTO> getAll(
+            @RequestParam(defaultValue = "0")   int page,
+            @RequestParam(defaultValue = "10")  int size,
+            @RequestParam(defaultValue = "nom") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction
+    ) {
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return readableService.getAll(pageable);
     }
 
     @GetMapping("/{id}")

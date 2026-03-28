@@ -1,7 +1,11 @@
 package com.fleety.olympics.service;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
 import com.fleety.olympics.dto.request.CompetitionRequestDTO;
 import com.fleety.olympics.dto.response.CompetitionResponseDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.exception.DuplicateResourceException;
 import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.Competition;
@@ -10,9 +14,6 @@ import com.fleety.olympics.service.interfaces.ReadableService;
 import com.fleety.olympics.service.interfaces.WritableService;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,10 +21,10 @@ public class CompetitionService implements ReadableService<CompetitionResponseDT
 
     private final CompetitionRepository competitionRepository;
 
-    public List<CompetitionResponseDTO> getAll() {
-        return competitionRepository.findAll().stream()
-                .map(this::toResponseDTO)
-                .toList();
+    public PageResponseDTO<CompetitionResponseDTO> getAll(Pageable pageable) {
+        return PageResponseDTO.from(
+            competitionRepository.findAll(pageable).map(this::toResponseDTO)
+        );
     }
 
     public CompetitionResponseDTO getById(Long id) {

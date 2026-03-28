@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,10 +24,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.fleety.olympics.dto.request.MedailleRequestDTO;
 import com.fleety.olympics.dto.response.ClassementResponseDTO;
 import com.fleety.olympics.dto.response.MedailleResponseDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.Athlete;
 import com.fleety.olympics.model.Competition;
@@ -41,7 +49,8 @@ import com.fleety.olympics.strategy.TriStrategy;
 
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("MedailleService — Tests Unitaires (Couverture Complète)")
+@DisplayName("MedailleService — Tests Unitaires")
+@ActiveProfiles("test")
 class MedailleServiceTest {
 
     @Mock private MedailleRepository medailleRepository;
@@ -89,24 +98,37 @@ class MedailleServiceTest {
         @Test
         @DisplayName("doit retourner tous les médailles")
         void shouldReturnAllMedailles() {
+
             Medaille m = buildMedaille(1L, TypeMedaille.OR, senegal, faye);
-            when(medailleRepository.findAll()).thenReturn(List.of(m));
+            Page<Medaille> page = new PageImpl<>(List.of(m));
 
-            List<MedailleResponseDTO> result = medailleService.getAll();
+            when(medailleRepository.findAll(any(Pageable.class)))
+                    .thenReturn(page);
 
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).getId()).isEqualTo(1L);
-            assertThat(result.get(0).getType()).isEqualTo(TypeMedaille.OR);
+            PageResponseDTO<MedailleResponseDTO> result =
+                    medailleService.getAll(PageRequest.of(0, 10));
+
+            assertThat(result.getContenu()).hasSize(1);
+            assertThat(result.getContenu().get(0).getId()).isEqualTo(1L);
+            assertThat(result.getContenu().get(0).getType()).isEqualTo(TypeMedaille.OR);
+            assertThat(result.getTotalElements()).isEqualTo(1);
+            verify(medailleRepository, times(1)).findAll(any(Pageable.class));
         }
 
         @Test
         @DisplayName("doit retourner une liste vide si aucune médaille")
         void shouldReturnEmpty_whenNone() {
-            when(medailleRepository.findAll()).thenReturn(Collections.emptyList());
 
-            List<MedailleResponseDTO> result = medailleService.getAll();
+            Page<Medaille> page = new PageImpl<>(List.of());
 
-            assertThat(result).isEmpty();
+            when(medailleRepository.findAll(any(Pageable.class)))
+                    .thenReturn(page);
+
+            PageResponseDTO<MedailleResponseDTO> result =
+                    medailleService.getAll(PageRequest.of(0, 10));
+
+            assertThat(result.getContenu()).isEmpty();
+            assertThat(result.getTotalElements()).isEqualTo(0);
         }
     }
 

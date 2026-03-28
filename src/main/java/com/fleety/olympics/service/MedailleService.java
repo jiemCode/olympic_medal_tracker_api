@@ -1,12 +1,26 @@
 package com.fleety.olympics.service;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
 import com.fleety.olympics.dto.request.MedailleRequestDTO;
 import com.fleety.olympics.dto.response.ClassementResponseDTO;
 import com.fleety.olympics.dto.response.MedailleResponseDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.exception.ResourceNotFoundException;
-import com.fleety.olympics.model.*;
+import com.fleety.olympics.model.Athlete;
+import com.fleety.olympics.model.Competition;
+import com.fleety.olympics.model.Medaille;
 import com.fleety.olympics.model.Medaille.TypeMedaille;
-import com.fleety.olympics.repository.*;
+import com.fleety.olympics.model.Pays;
+import com.fleety.olympics.repository.AthleteRepository;
+import com.fleety.olympics.repository.CompetitionRepository;
+import com.fleety.olympics.repository.MedailleRepository;
+import com.fleety.olympics.repository.PaysRepository;
 import com.fleety.olympics.service.interfaces.Classifiable;
 import com.fleety.olympics.service.interfaces.MedailleFilterable;
 import com.fleety.olympics.service.interfaces.ReadableService;
@@ -14,10 +28,6 @@ import com.fleety.olympics.service.interfaces.WritableService;
 import com.fleety.olympics.strategy.TriStrategy;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,10 +39,10 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
     private final CompetitionRepository competitionRepository;
     private final Map<String, TriStrategy> triStrategies;  // Injection des méthodes de tri
 
-    public List<MedailleResponseDTO> getAll() {
-        return medailleRepository.findAll().stream()
-                .map(this::toResponseDTO)
-                .toList();
+    public PageResponseDTO<MedailleResponseDTO> getAll(Pageable pageable) {
+        return PageResponseDTO.from(
+            medailleRepository.findAll(pageable).map(this::toResponseDTO)
+        );
     }
 
     public MedailleResponseDTO getById(Long id) {

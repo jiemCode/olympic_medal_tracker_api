@@ -21,9 +21,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.fleety.olympics.dto.request.AthleteRequestDTO;
 import com.fleety.olympics.dto.response.AthleteResponseDTO;
+import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.Athlete;
 import com.fleety.olympics.model.Pays;
@@ -33,6 +40,7 @@ import com.fleety.olympics.repository.PaysRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AthleteService — Tests Unitaires")
+@ActiveProfiles("test")
 class AthleteServiceTest {
 
     @Mock
@@ -78,13 +86,18 @@ class AthleteServiceTest {
         @DisplayName("doit retourner tous les athlètes")
         void shouldReturnAllAthletes() {
 
-            when(athleteRepository.findAll()).thenReturn(List.of(athlete));
+            Page<Athlete> page = new PageImpl<>(List.of(athlete));
 
-            List<AthleteResponseDTO> result = athleteService.getAll();
+            when(athleteRepository.findAll(any(Pageable.class)))
+                    .thenReturn(page);
 
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).getNom()).isEqualTo("Faye");
-            assertThat(result.get(0).getPaysNom()).isEqualTo("Sénégal");
+            PageResponseDTO<AthleteResponseDTO> result =
+                    athleteService.getAll(PageRequest.of(0, 10));
+
+            assertThat(result.getContenu()).hasSize(1);
+            assertThat(result.getContenu().get(0).getNom()).isEqualTo("Faye");
+            assertThat(result.getContenu().get(0).getPaysNom()).isEqualTo("Sénégal");
+            assertThat(result.getTotalElements()).isEqualTo(1);
         }
     }
 
