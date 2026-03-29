@@ -22,7 +22,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
@@ -83,7 +82,7 @@ class AthleteControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/athletes")
+    @DisplayName("GET /api/v2/athletes")
     class GetAll {
 
         @Test
@@ -102,7 +101,7 @@ class AthleteControllerTest {
 
             when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
 
-            mockMvc.perform(get("/api/v1/athletes"))
+            mockMvc.perform(get("/api/v2/athletes"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.contenu[0].nom").value("Faye"))
                     .andExpect(jsonPath("$.contenu[0].prenom").value("Mbaye"))
@@ -130,7 +129,7 @@ class AthleteControllerTest {
 
             when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
 
-            mockMvc.perform(get("/api/v1/athletes"))
+            mockMvc.perform(get("/api/v2/athletes"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.contenu").isEmpty())
                     .andExpect(jsonPath("$.pageActuelle").value(0))
@@ -143,7 +142,7 @@ class AthleteControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/athletes/{id}")
+    @DisplayName("GET /api/v2/athletes/{id}")
     class GetById {
 
         @Test
@@ -152,7 +151,7 @@ class AthleteControllerTest {
 
             when(readableService.getById(1L)).thenReturn(responseDTO);
 
-            mockMvc.perform(get("/api/v1/athletes/1"))
+            mockMvc.perform(get("/api/v2/athletes/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(1))
                     .andExpect(jsonPath("$.nom").value("Faye"))
@@ -167,7 +166,7 @@ class AthleteControllerTest {
             when(readableService.getById(99L))
                     .thenThrow(new ResourceNotFoundException("Athlète non trouvé avec l'id: 99"));
 
-            mockMvc.perform(get("/api/v1/athletes/99"))
+            mockMvc.perform(get("/api/v2/athletes/99"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status").value(404))
                     .andExpect(jsonPath("$.message").value("Athlète non trouvé avec l'id: 99"));
@@ -175,7 +174,7 @@ class AthleteControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/athletes/pays/{paysId}")
+    @DisplayName("GET /api/v2/athletes/pays/{paysId}")
     class GetByPays {
 
         @Test
@@ -184,7 +183,7 @@ class AthleteControllerTest {
 
             when(filterable.getByPays(1L)).thenReturn(List.of(responseDTO));
 
-            mockMvc.perform(get("/api/v1/athletes/pays/1"))
+            mockMvc.perform(get("/api/v2/athletes/pays/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].paysNom").value("Sénégal"))
                     .andExpect(jsonPath("$[0].paysCode").value("SEN"));
@@ -197,14 +196,14 @@ class AthleteControllerTest {
             when(filterable.getByPays(99L))
                     .thenThrow(new ResourceNotFoundException("Pays non trouvé avec l'id: 99"));
 
-            mockMvc.perform(get("/api/v1/athletes/pays/99"))
+            mockMvc.perform(get("/api/v2/athletes/pays/99"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status").value(404));
         }
     }
 
     @Nested
-    @DisplayName("POST /api/v1/athletes")
+    @DisplayName("POST /api/v2/athletes")
     class Create {
 
         @Test
@@ -213,7 +212,7 @@ class AthleteControllerTest {
 
             when(writableService.create(any())).thenReturn(responseDTO);
 
-            mockMvc.perform(post("/api/v1/athletes")
+            mockMvc.perform(post("/api/v2/athletes")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isCreated())
@@ -227,7 +226,7 @@ class AthleteControllerTest {
 
             requestDTO.setNom("");
 
-            mockMvc.perform(post("/api/v1/athletes")
+            mockMvc.perform(post("/api/v2/athletes")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isBadRequest())
@@ -241,7 +240,7 @@ class AthleteControllerTest {
 
             requestDTO.setPaysId(null);
 
-            mockMvc.perform(post("/api/v1/athletes")
+            mockMvc.perform(post("/api/v2/athletes")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isBadRequest())
@@ -252,7 +251,7 @@ class AthleteControllerTest {
         @Test
         @DisplayName("doit retourner 400 quand le corps est vide")
         void shouldReturn400_whenBodyIsEmpty() throws Exception {
-            mockMvc.perform(post("/api/v1/athletes")
+            mockMvc.perform(post("/api/v2/athletes")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}"))
                     .andExpect(status().isBadRequest())
@@ -263,7 +262,7 @@ class AthleteControllerTest {
         @Test
         @DisplayName("doit retourner 400 quand le corps est manquant")
         void shouldReturn400_whenBodyIsMissed() throws Exception {
-            mockMvc.perform(post("/api/v1/athletes")
+            mockMvc.perform(post("/api/v2/athletes")
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("Bad Request"))
@@ -277,7 +276,7 @@ class AthleteControllerTest {
             when(writableService.create(any()))
                     .thenThrow(new ResourceNotFoundException("Pays non trouvé avec l'id: 99"));
 
-            mockMvc.perform(post("/api/v1/athletes")
+            mockMvc.perform(post("/api/v2/athletes")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isNotFound())
@@ -286,7 +285,7 @@ class AthleteControllerTest {
     }
 
     @Nested
-    @DisplayName("PUT /api/v1/athletes/{id}")
+    @DisplayName("PUT /api/v2/athletes/{id}")
     class Update {
 
         @Test
@@ -295,7 +294,7 @@ class AthleteControllerTest {
 
             when(writableService.update(eq(1L), any())).thenReturn(responseDTO);
 
-            mockMvc.perform(put("/api/v1/athletes/1")
+            mockMvc.perform(put("/api/v2/athletes/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isOk())
@@ -309,7 +308,7 @@ class AthleteControllerTest {
             when(writableService.update(eq(99L), any()))
                     .thenThrow(new ResourceNotFoundException("Athlète non trouvé avec l'id: 99"));
 
-            mockMvc.perform(put("/api/v1/athletes/99")
+            mockMvc.perform(put("/api/v2/athletes/99")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isNotFound());
@@ -317,7 +316,7 @@ class AthleteControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /api/v1/athletes/{id}")
+    @DisplayName("DELETE /api/v2/athletes/{id}")
     class Delete {
 
         @Test
@@ -326,7 +325,7 @@ class AthleteControllerTest {
 
             doNothing().when(writableService).delete(1L);
 
-            mockMvc.perform(delete("/api/v1/athletes/1"))
+            mockMvc.perform(delete("/api/v2/athletes/1"))
                     .andExpect(status().isNoContent());
 
             verify(writableService, times(1)).delete(1L);
@@ -339,7 +338,7 @@ class AthleteControllerTest {
             doThrow(new ResourceNotFoundException("Athlète non trouvé avec l'id: 99"))
                     .when(writableService).delete(99L);
 
-            mockMvc.perform(delete("/api/v1/athletes/99"))
+            mockMvc.perform(delete("/api/v2/athletes/99"))
                     .andExpect(status().isNotFound());
         }
     }

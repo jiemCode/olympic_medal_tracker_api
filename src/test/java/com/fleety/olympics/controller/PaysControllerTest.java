@@ -21,7 +21,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
@@ -73,7 +72,7 @@ class PaysControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/pays")
+    @DisplayName("GET /api/v2/pays")
     class GetAll {
 
         @Test
@@ -92,7 +91,7 @@ class PaysControllerTest {
 
             when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
 
-            mockMvc.perform(get("/api/v1/pays"))
+            mockMvc.perform(get("/api/v2/pays"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenu").isArray())
                 .andExpect(jsonPath("$.contenu[0].id").value(1))
@@ -122,7 +121,7 @@ class PaysControllerTest {
 
             when(readableService.getAll(any(Pageable.class))).thenReturn(pageVide);
 
-            mockMvc.perform(get("/api/v1/pays"))
+            mockMvc.perform(get("/api/v2/pays"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.contenu").isEmpty())
                     .andExpect(jsonPath("$.totalElements").value(0));
@@ -130,7 +129,7 @@ class PaysControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/pays/{id}")
+    @DisplayName("GET /api/v2/pays/{id}")
     class GetById {
 
         @Test
@@ -139,7 +138,7 @@ class PaysControllerTest {
 
             when(readableService.getById(1L)).thenReturn(responseDTO);
 
-            mockMvc.perform(get("/api/v1/pays/1"))
+            mockMvc.perform(get("/api/v2/pays/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(1))
                     .andExpect(jsonPath("$.nom").value("Sénégal"))
@@ -154,7 +153,7 @@ class PaysControllerTest {
             when(readableService.getById(99L))
                     .thenThrow(new ResourceNotFoundException("Pays non trouvé avec l'id: 99"));
 
-            mockMvc.perform(get("/api/v1/pays/99"))
+            mockMvc.perform(get("/api/v2/pays/99"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status").value(404))
                     .andExpect(jsonPath("$.message").value("Pays non trouvé avec l'id: 99"));
@@ -162,7 +161,7 @@ class PaysControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/v1/pays")
+    @DisplayName("POST /api/v2/pays")
     class Create {
 
         @Test
@@ -171,7 +170,7 @@ class PaysControllerTest {
 
             when(writableService.create(any())).thenReturn(responseDTO);
 
-            mockMvc.perform(post("/api/v1/pays")
+            mockMvc.perform(post("/api/v2/pays")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isCreated())
@@ -185,7 +184,7 @@ class PaysControllerTest {
 
             requestDTO.setNom("");
 
-            mockMvc.perform(post("/api/v1/pays")
+            mockMvc.perform(post("/api/v2/pays")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isBadRequest())
@@ -200,7 +199,7 @@ class PaysControllerTest {
 
             requestDTO.setCode("");
 
-            mockMvc.perform(post("/api/v1/pays")
+            mockMvc.perform(post("/api/v2/pays")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isBadRequest())
@@ -212,7 +211,7 @@ class PaysControllerTest {
         @Test
         @DisplayName("doit retourner 400 quand le corps est vide")
         void shouldReturn400_whenBodyIsEmpty() throws Exception {
-            mockMvc.perform(post("/api/v1/pays")
+            mockMvc.perform(post("/api/v2/pays")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}"))
                     .andExpect(status().isBadRequest())
@@ -228,7 +227,7 @@ class PaysControllerTest {
             when(writableService.create(any()))
                     .thenThrow(new DuplicateResourceException("Un pays avec le code 'SEN' existe déjà"));
 
-            mockMvc.perform(post("/api/v1/pays")
+            mockMvc.perform(post("/api/v2/pays")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isConflict())
@@ -239,7 +238,7 @@ class PaysControllerTest {
     }
 
     @Nested
-    @DisplayName("PUT /api/v1/pays/{id}")
+    @DisplayName("PUT /api/v2/pays/{id}")
     class Update {
 
         @Test
@@ -248,7 +247,7 @@ class PaysControllerTest {
 
             when(writableService.update(eq(1L), any())).thenReturn(responseDTO);
 
-            mockMvc.perform(put("/api/v1/pays/1")
+            mockMvc.perform(put("/api/v2/pays/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isOk())
@@ -262,7 +261,7 @@ class PaysControllerTest {
             when(writableService.update(eq(99L), any()))
                     .thenThrow(new ResourceNotFoundException("Pays non trouvé avec l'id: 99"));
 
-            mockMvc.perform(put("/api/v1/pays/99")
+            mockMvc.perform(put("/api/v2/pays/99")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isNotFound())
@@ -271,7 +270,7 @@ class PaysControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /api/v1/pays/{id}")
+    @DisplayName("DELETE /api/v2/pays/{id}")
     class Delete {
 
         @Test
@@ -280,7 +279,7 @@ class PaysControllerTest {
 
             doNothing().when(writableService).delete(1L);
 
-            mockMvc.perform(delete("/api/v1/pays/1"))
+            mockMvc.perform(delete("/api/v2/pays/1"))
                     .andExpect(status().isNoContent());
 
             verify(writableService, times(1)).delete(1L);
@@ -293,7 +292,7 @@ class PaysControllerTest {
             doThrow(new ResourceNotFoundException("Pays non trouvé avec l'id: 99"))
                     .when(writableService).delete(99L);
 
-            mockMvc.perform(delete("/api/v1/pays/99"))
+            mockMvc.perform(delete("/api/v2/pays/99"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status").value(404));
         }
