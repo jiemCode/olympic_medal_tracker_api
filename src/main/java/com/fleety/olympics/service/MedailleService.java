@@ -29,6 +29,10 @@ import com.fleety.olympics.strategy.TriStrategy;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Service métier pour gérer les médailles : CRUD, filtrage par athlète/compétition,
+ * et calcul des classements par pays avec stratégies de tri configurables.
+ */
 @Service
 @RequiredArgsConstructor
 public class MedailleService implements ReadableService<MedailleResponseDTO>, WritableService<MedailleResponseDTO, MedailleRequestDTO>, Classifiable, MedailleFilterable{
@@ -39,16 +43,34 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
     private final CompetitionRepository competitionRepository;
     private final Map<String, TriStrategy> triStrategies;  // Injection des méthodes de tri
 
+    /**
+     * Retourne une page de médailles avec tri appliqué.
+     *
+     * @param pageable configuration pagination/tri.
+     * @return page de médailles.
+     */
     public PageResponseDTO<MedailleResponseDTO> getAll(Pageable pageable) {
         return PageResponseDTO.from(
             medailleRepository.findAll(pageable).map(this::toResponseDTO)
         );
     }
 
+    /**
+     * Détail d'une médaille par identifiant.
+     *
+     * @param id identifiant de la médaille.
+     * @return médaille trouvée.
+     */
     public MedailleResponseDTO getById(Long id) {
         return toResponseDTO(findOrThrow(id));
     }
 
+    /**
+     * Médailles attribuées à un athlète.
+     *
+     * @param athleteId identifiant de l'athlète.
+     * @return liste des médailles de l'athlète.
+     */
     public List<MedailleResponseDTO> getByAthlete(Long athleteId) {
         if (!athleteRepository.existsById(athleteId)) {
             throw new ResourceNotFoundException("Athlète non trouvé avec l'id: " + athleteId);
@@ -58,6 +80,12 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
                 .toList();
     }
 
+    /**
+     * Médailles associées à une compétition.
+     *
+     * @param competitionId identifiant de la compétition.
+     * @return liste des médailles attribuées dans cette compétition.
+     */
     public List<MedailleResponseDTO> getByCompetition(Long competitionId) {
         if (!competitionRepository.existsById(competitionId)) {
             throw new ResourceNotFoundException("Compétition non trouvée avec l'id: " + competitionId);
@@ -67,6 +95,12 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
                 .toList();
     }
 
+    /**
+     * Attribue une nouvelle médaille en validant l'existence des entités liées.
+     *
+     * @param dto payload validé (type, date, athlète, pays, compétition).
+     * @return médaille créée.
+     */
     public MedailleResponseDTO create(MedailleRequestDTO dto) {
         Athlete athlete = athleteRepository.findById(dto.getAthleteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Athlète non trouvé avec l'id: " + dto.getAthleteId()));
@@ -85,6 +119,13 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
         return toResponseDTO(medailleRepository.save(medaille));
     }
 
+    /**
+     * Met à jour une médaille existante.
+     *
+     * @param id identifiant de la médaille.
+     * @param dto nouvelles valeurs.
+     * @return médaille mise à jour.
+     */
     public MedailleResponseDTO update(Long id, MedailleRequestDTO dto) {
         Medaille medaille = findOrThrow(id);
 
@@ -104,6 +145,11 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
         return toResponseDTO(medailleRepository.save(medaille));
     }
 
+    /**
+     * Supprime une médaille par identifiant.
+     *
+     * @param id identifiant de la médaille.
+     */
     public void delete(Long id) {
         if (!medailleRepository.existsById(id)) {
             throw new ResourceNotFoundException("Médaille non trouvée avec l'id: " + id);
@@ -111,6 +157,13 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
         medailleRepository.deleteById(id);
     }
 
+    /**
+     * Calcule le classement des pays selon une stratégie de tri.
+     *
+     * @param tri clé de stratégie : {@code or}, {@code argent}, {@code bronze},
+     *            {@code points} (3/2/1) ou {@code total} (défaut).
+     * @return classement ordonné des pays.
+     */
     public List<ClassementResponseDTO> getClassement(String tri) {
         List<Medaille> toutes = medailleRepository.findAll();
 
@@ -144,6 +197,12 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
         return classement;
     }
 
+    /**
+     * Statistiques de médailles pour un pays.
+     *
+     * @param paysId identifiant du pays.
+     * @return résumé des médailles et des points.
+     */
     public ClassementResponseDTO getStatsByPays(Long paysId) {
         Pays pays = paysRepository.findById(paysId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pays non trouvé avec l'id: " + paysId));

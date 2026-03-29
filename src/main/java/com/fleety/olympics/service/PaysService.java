@@ -15,24 +15,46 @@ import com.fleety.olympics.service.interfaces.WritableService;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Service métier pour gérer les pays participants (CRUD + pagination).
+ */
 @Service
 @RequiredArgsConstructor
 public class PaysService implements ReadableService<PaysResponseDTO>, WritableService<PaysResponseDTO, PaysRequestDTO> {
 
     private final PaysRepository paysRepository;
 
+    /**
+     * Retourne une page de pays triés.
+     *
+     * @param pageable configuration de pagination/tri.
+     * @return page de pays.
+     */
     public PageResponseDTO<PaysResponseDTO> getAll(Pageable pageable) {
         return PageResponseDTO.from(
             paysRepository.findAll(pageable).map(this::toResponseDTO)
         );
     }
 
+    /**
+     * Détail d'un pays par identifiant.
+     *
+     * @param id identifiant du pays.
+     * @return pays trouvé.
+     */
     public PaysResponseDTO getById(Long id) {
         Pays pays = paysRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pays non trouvé avec l'id: " + id));
         return toResponseDTO(pays);
     }
 
+    /**
+     * Crée un pays en validant l'unicité du nom et du code.
+     *
+     * @param dto payload validé.
+     * @return pays créé.
+     * @throws DuplicateResourceException si nom ou code existent déjà.
+     */
     public PaysResponseDTO create(PaysRequestDTO dto) {
         if (paysRepository.existsByCode(dto.getCode())) {
             throw new DuplicateResourceException("Un pays avec le code '" + dto.getCode() + "' existe déjà");
@@ -43,6 +65,13 @@ public class PaysService implements ReadableService<PaysResponseDTO>, WritableSe
         return toResponseDTO(paysRepository.save(toEntity(dto)));
     }
 
+    /**
+     * Met à jour un pays existant.
+     *
+     * @param id identifiant du pays.
+     * @param dto nouvelles valeurs.
+     * @return pays mis à jour.
+     */
     public PaysResponseDTO update(Long id, PaysRequestDTO dto) {
         Pays pays = paysRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pays non trouvé avec l'id: " + id));
@@ -54,6 +83,11 @@ public class PaysService implements ReadableService<PaysResponseDTO>, WritableSe
         return toResponseDTO(paysRepository.save(pays));
     }
 
+    /**
+     * Supprime un pays par identifiant.
+     *
+     * @param id identifiant du pays.
+     */
     public void delete(Long id) {
         if (!paysRepository.existsById(id)) {
             throw new ResourceNotFoundException("Pays non trouvé avec l'id: " + id);

@@ -101,6 +101,16 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<author>true</author>
+					<version>true</version>
+					<windowtitle>Olympic Medal Tracker — API</windowtitle>
+					<doctitle>Olympic Medal Tracker — Documentation</doctitle>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 

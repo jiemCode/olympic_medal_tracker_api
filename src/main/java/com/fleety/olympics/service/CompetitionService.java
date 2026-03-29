@@ -15,22 +15,45 @@ import com.fleety.olympics.service.interfaces.WritableService;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Service métier pour gérer le cycle de vie des compétitions
+ * (listing paginé, détail, création, mise à jour, suppression).
+ */
 @Service
 @RequiredArgsConstructor
 public class CompetitionService implements ReadableService<CompetitionResponseDTO>, WritableService<CompetitionResponseDTO, CompetitionRequestDTO> {
 
     private final CompetitionRepository competitionRepository;
 
+    /**
+     * Retourne une page de compétitions avec tri appliqué en base.
+     *
+     * @param pageable configuration de pagination/tri.
+     * @return page de {@link CompetitionResponseDTO}.
+     */
     public PageResponseDTO<CompetitionResponseDTO> getAll(Pageable pageable) {
         return PageResponseDTO.from(
             competitionRepository.findAll(pageable).map(this::toResponseDTO)
         );
     }
 
+    /**
+     * Récupère une compétition par identifiant.
+     *
+     * @param id identifiant de la compétition.
+     * @return DTO correspondant.
+     */
     public CompetitionResponseDTO getById(Long id) {
         return toResponseDTO(findOrThrow(id));
     }
 
+    /**
+     * Crée une compétition si le nom est unique.
+     *
+     * @param dto payload validé.
+     * @return compétition créée.
+     * @throws DuplicateResourceException si le nom existe déjà.
+     */
     public CompetitionResponseDTO create(CompetitionRequestDTO dto) {
         if (competitionRepository.existsByNom(dto.getNom())) {
             throw new DuplicateResourceException("Une compétition avec le nom '" + dto.getNom() + "' existe déjà");
@@ -38,6 +61,13 @@ public class CompetitionService implements ReadableService<CompetitionResponseDT
         return toResponseDTO(competitionRepository.save(toEntity(dto)));
     }
 
+    /**
+     * Met à jour une compétition existante.
+     *
+     * @param id identifiant de la compétition.
+     * @param dto nouvelles valeurs.
+     * @return compétition mise à jour.
+     */
     public CompetitionResponseDTO update(Long id, CompetitionRequestDTO dto) {
         Competition competition = findOrThrow(id);
 
@@ -50,6 +80,11 @@ public class CompetitionService implements ReadableService<CompetitionResponseDT
         return toResponseDTO(competitionRepository.save(competition));
     }
 
+    /**
+     * Supprime une compétition par identifiant.
+     *
+     * @param id identifiant de la compétition.
+     */
     public void delete(Long id) {
         if (!competitionRepository.existsById(id)) {
             throw new ResourceNotFoundException("Compétition non trouvée avec l'id: " + id);
