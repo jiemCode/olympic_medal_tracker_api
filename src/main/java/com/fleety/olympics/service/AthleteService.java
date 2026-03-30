@@ -19,6 +19,9 @@ import com.fleety.olympics.service.interfaces.WritableService;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Service métier pour gérer les athlètes (CRUD, pagination, filtrage par pays).
+ */
 @Service
 @RequiredArgsConstructor
 public class AthleteService implements ReadableService<AthleteResponseDTO>, WritableService<AthleteResponseDTO, AthleteRequestDTO>, Filterable<AthleteResponseDTO> {
@@ -26,16 +29,34 @@ public class AthleteService implements ReadableService<AthleteResponseDTO>, Writ
     private final AthleteRepository athleteRepository;
     private final PaysRepository paysRepository;
 
+    /**
+     * Retourne une page d'athlètes avec tri appliqué.
+     *
+     * @param pageable configuration pagination/tri.
+     * @return page d'athlètes.
+     */
     public PageResponseDTO<AthleteResponseDTO> getAll(Pageable pageable) {
         return PageResponseDTO.from(
             athleteRepository.findAll(pageable).map(this::toResponseDTO)
         );
     }
 
+    /**
+     * Récupère un athlète par identifiant.
+     *
+     * @param id identifiant de l'athlète.
+     * @return DTO correspondant.
+     */
     public AthleteResponseDTO getById(Long id) {
         return toResponseDTO(findOrThrow(id));
     }
 
+    /**
+     * Liste les athlètes d'un pays.
+     *
+     * @param paysId identifiant du pays.
+     * @return athlètes rattachés.
+     */
     public List<AthleteResponseDTO> getByPays(Long paysId) {
         if (!paysRepository.existsById(paysId)) {
             throw new ResourceNotFoundException("Pays non trouvé avec l'id: " + paysId);
@@ -45,6 +66,12 @@ public class AthleteService implements ReadableService<AthleteResponseDTO>, Writ
                 .toList();
     }
 
+    /**
+     * Crée un athlète après validation du pays cible.
+     *
+     * @param dto payload validé.
+     * @return athlète créé.
+     */
     public AthleteResponseDTO create(AthleteRequestDTO dto) {
         Pays pays = paysRepository.findById(dto.getPaysId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pays non trouvé avec l'id: " + dto.getPaysId()));
@@ -52,6 +79,13 @@ public class AthleteService implements ReadableService<AthleteResponseDTO>, Writ
         return toResponseDTO(athleteRepository.save(athlete));
     }
 
+    /**
+     * Met à jour un athlète existant.
+     *
+     * @param id identifiant de l'athlète.
+     * @param dto nouvelles valeurs.
+     * @return athlète mis à jour.
+     */
     public AthleteResponseDTO update(Long id, AthleteRequestDTO dto) {
         Athlete athlete = findOrThrow(id);
         Pays pays = paysRepository.findById(dto.getPaysId())
@@ -66,6 +100,11 @@ public class AthleteService implements ReadableService<AthleteResponseDTO>, Writ
         return toResponseDTO(athleteRepository.save(athlete));
     }
 
+    /**
+     * Supprime un athlète par identifiant.
+     *
+     * @param id identifiant de l'athlète.
+     */
     public void delete(Long id) {
         if (!athleteRepository.existsById(id)) {
             throw new ResourceNotFoundException("Athlète non trouvé avec l'id: " + id);

@@ -21,7 +21,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
@@ -89,7 +88,7 @@ class MedailleControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/medailles")
+    @DisplayName("GET /api/v2/medailles")
     class GetAll {
 
         @Test
@@ -108,7 +107,7 @@ class MedailleControllerTest {
 
             when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
 
-            mockMvc.perform(get("/api/v1/medailles"))
+            mockMvc.perform(get("/api/v2/medailles"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.contenu[0].type").value("OR"))
                     .andExpect(jsonPath("$.contenu[0].paysNom").value("Sénégal"))
@@ -122,7 +121,7 @@ class MedailleControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/medailles/{id}")
+    @DisplayName("GET /api/v2/medailles/{id}")
     class Get {
 
         @Test
@@ -131,7 +130,7 @@ class MedailleControllerTest {
 
             when(readableService.getById(1L)).thenReturn(medailleDTO);
 
-            mockMvc.perform(get("/api/v1/medailles/1"))
+            mockMvc.perform(get("/api/v2/medailles/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.type").exists())
                     .andExpect(jsonPath("$.dateObtention").exists())
@@ -143,7 +142,7 @@ class MedailleControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/v1/medailles")
+    @DisplayName("POST /api/v2/medailles")
     class Create {
 
         @Test
@@ -152,7 +151,7 @@ class MedailleControllerTest {
 
             when(writableService.create(any())).thenReturn(medailleDTO);
 
-            mockMvc.perform(post("/api/v1/medailles")
+            mockMvc.perform(post("/api/v2/medailles")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isCreated())
@@ -166,7 +165,7 @@ class MedailleControllerTest {
 
             requestDTO.setType(null);
 
-            mockMvc.perform(post("/api/v1/medailles")
+            mockMvc.perform(post("/api/v2/medailles")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isBadRequest())
@@ -182,7 +181,7 @@ class MedailleControllerTest {
             when(writableService.create(any()))
                     .thenThrow(new ResourceNotFoundException("Athlète non trouvé avec l'id: 99"));
 
-            mockMvc.perform(post("/api/v1/medailles")
+            mockMvc.perform(post("/api/v2/medailles")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isNotFound())
@@ -191,7 +190,7 @@ class MedailleControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/v1/medailles/{id}")
+    @DisplayName("POST /api/v2/medailles/{id}")
     class Update {
 
         @Test
@@ -200,7 +199,7 @@ class MedailleControllerTest {
 
             when(writableService.update(1L, requestDTO)).thenReturn(medailleDTO);
 
-            mockMvc.perform(put("/api/v1/medailles/1")
+            mockMvc.perform(put("/api/v2/medailles/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isOk())
@@ -214,7 +213,7 @@ class MedailleControllerTest {
 
             requestDTO.setType(null);
 
-            mockMvc.perform(post("/api/v1/medailles")
+            mockMvc.perform(post("/api/v2/medailles")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isBadRequest())
@@ -230,7 +229,7 @@ class MedailleControllerTest {
             when(writableService.create(any()))
                     .thenThrow(new ResourceNotFoundException("Athlète non trouvé avec l'id: 99"));
 
-            mockMvc.perform(post("/api/v1/medailles")
+            mockMvc.perform(post("/api/v2/medailles")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isNotFound())
@@ -239,7 +238,7 @@ class MedailleControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/medailles/athlete/{athleteId}")
+    @DisplayName("GET /api/v2/medailles/athlete/{athleteId}")
     class GetByAthlete {
 
         @Test
@@ -248,7 +247,7 @@ class MedailleControllerTest {
 
             when(medailleFilterable.getByAthlete(1L)).thenReturn(List.of(medailleDTO));
 
-            mockMvc.perform(get("/api/v1/medailles/athlete/1"))
+            mockMvc.perform(get("/api/v2/medailles/athlete/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].athleteNom").value("Faye Mbaye"));
         }
@@ -260,13 +259,13 @@ class MedailleControllerTest {
             when(medailleFilterable.getByAthlete(99L))
                     .thenThrow(new ResourceNotFoundException("Athlète non trouvé avec l'id: 99"));
 
-            mockMvc.perform(get("/api/v1/medailles/athlete/99"))
+            mockMvc.perform(get("/api/v2/medailles/athlete/99"))
                     .andExpect(status().isNotFound());
         }
     }
 
     @Nested
-    @DisplayName("GET /api/v1/medailles/competition/{competitionId}")
+    @DisplayName("GET /api/v2/medailles/competition/{competitionId}")
     class GetByCompetition {
 
         @Test
@@ -275,7 +274,7 @@ class MedailleControllerTest {
 
             when(medailleFilterable.getByCompetition(1L)).thenReturn(List.of(medailleDTO));
 
-            mockMvc.perform(get("/api/v1/medailles/competition/1"))
+            mockMvc.perform(get("/api/v2/medailles/competition/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].type").exists())
                     .andExpect(jsonPath("$[0].dateObtention").exists())
@@ -292,13 +291,13 @@ class MedailleControllerTest {
             when(medailleFilterable.getByCompetition(99L))
                     .thenThrow(new ResourceNotFoundException("Compétition non trouvé avec l'id: 99"));
 
-            mockMvc.perform(get("/api/v1/medailles/competition/99"))
+            mockMvc.perform(get("/api/v2/medailles/competition/99"))
                     .andExpect(status().isNotFound());
         }
     }
 
     @Nested
-    @DisplayName("GET /api/v1/classement")
+    @DisplayName("GET /api/v2/classement")
     class GetClassement {
 
         @Test
@@ -313,7 +312,7 @@ class MedailleControllerTest {
             );
             when(classifiable.getClassement(null)).thenReturn(List.of(senegal, usa));
 
-            mockMvc.perform(get("/api/v1/classement"))
+            mockMvc.perform(get("/api/v2/classement"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].paysNom").value("Sénégal"))
                     .andExpect(jsonPath("$[0].or").value(2))
@@ -330,7 +329,7 @@ class MedailleControllerTest {
             );
             when(classifiable.getClassement("or")).thenReturn(List.of(senegal));
 
-            mockMvc.perform(get("/api/v1/classement?tri=or"))
+            mockMvc.perform(get("/api/v2/classement?tri=or"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].or").value(3));
         }
@@ -344,14 +343,14 @@ class MedailleControllerTest {
             );
             when(classifiable.getClassement("points")).thenReturn(List.of(senegal));
 
-            mockMvc.perform(get("/api/v1/classement?tri=points"))
+            mockMvc.perform(get("/api/v2/classement?tri=points"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].points").value(9));
         }
     }
 
     @Nested
-    @DisplayName("GET /api/v1/classement/pays/{paysId}")
+    @DisplayName("GET /api/v2/classement/pays/{paysId}")
     class GetStatsOfPays {
 
         @Test
@@ -363,7 +362,7 @@ class MedailleControllerTest {
             );
             when(classifiable.getStatsByPays(1L)).thenReturn(stats);
 
-            mockMvc.perform(get("/api/v1/classement/pays/1"))
+            mockMvc.perform(get("/api/v2/classement/pays/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.paysNom").value("Sénégal"))
                     .andExpect(jsonPath("$.paysCode").value("SEN"))
@@ -380,7 +379,7 @@ class MedailleControllerTest {
 
             when(classifiable.getStatsByPays(99L)).thenThrow(new ResourceNotFoundException("Pays non trouvé avec l'id: 99"));
 
-            mockMvc.perform(get("/api/v1/classement/pays/99"))
+            mockMvc.perform(get("/api/v2/classement/pays/99"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error").value("Not Found"))
                     .andExpect(jsonPath("$.message").value("Pays non trouvé avec l'id: 99"));
@@ -388,7 +387,7 @@ class MedailleControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /api/v1/medailles/{id}")
+    @DisplayName("DELETE /api/v2/medailles/{id}")
     class Delete {
 
         @Test
@@ -397,7 +396,7 @@ class MedailleControllerTest {
 
             doNothing().when(writableService).delete(1L);
 
-            mockMvc.perform(delete("/api/v1/medailles/1"))
+            mockMvc.perform(delete("/api/v2/medailles/1"))
                     .andExpect(status().isNoContent());
 
             verify(writableService, times(1)).delete(1L);
@@ -410,7 +409,7 @@ class MedailleControllerTest {
             doThrow(new ResourceNotFoundException("Médaille non trouvée avec l'id: 99"))
                     .when(writableService).delete(99L);
 
-            mockMvc.perform(delete("/api/v1/medailles/99"))
+            mockMvc.perform(delete("/api/v2/medailles/99"))
                     .andExpect(status().isNotFound());
         }
     }

@@ -22,7 +22,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
@@ -82,7 +81,7 @@ class CompetitionControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/competitions")
+    @DisplayName("GET /api/v2/competitions")
     class GetAll {
 
         @Test
@@ -101,7 +100,7 @@ class CompetitionControllerTest {
 
             when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
 
-            mockMvc.perform(get("/api/v1/competitions"))
+            mockMvc.perform(get("/api/v2/competitions"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.contenu[0].nom").value("100m Hommes"))
                     .andExpect(jsonPath("$.contenu[0].discipline").value("Athlétisme"))
@@ -129,7 +128,7 @@ class CompetitionControllerTest {
 
             when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
 
-            mockMvc.perform(get("/api/v1/competitions"))
+            mockMvc.perform(get("/api/v2/competitions"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.contenu").isEmpty())
                     .andExpect(jsonPath("$.pageActuelle").value(0))
@@ -142,7 +141,7 @@ class CompetitionControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/competitions/{id}")
+    @DisplayName("GET /api/v2/competitions/{id}")
     class GetById {
 
         @Test
@@ -151,7 +150,7 @@ class CompetitionControllerTest {
 
             when(readableService.getById(1L)).thenReturn(responseDTO);
 
-            mockMvc.perform(get("/api/v1/competitions/1"))
+            mockMvc.perform(get("/api/v2/competitions/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(1))
                     .andExpect(jsonPath("$.nom").value("100m Hommes"))
@@ -165,7 +164,7 @@ class CompetitionControllerTest {
             when(readableService.getById(99L))
                     .thenThrow(new ResourceNotFoundException("Compétition non trouvée avec l'id: 99"));
 
-            mockMvc.perform(get("/api/v1/competitions/99"))
+            mockMvc.perform(get("/api/v2/competitions/99"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status").value(404))
                     .andExpect(jsonPath("$.message").value("Compétition non trouvée avec l'id: 99"));
@@ -173,7 +172,7 @@ class CompetitionControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/v1/competitions")
+    @DisplayName("POST /api/v2/competitions")
     class Create {
 
         @Test
@@ -182,7 +181,7 @@ class CompetitionControllerTest {
 
             when(writableService.create(any())).thenReturn(responseDTO);
 
-            mockMvc.perform(post("/api/v1/competitions")
+            mockMvc.perform(post("/api/v2/competitions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isCreated())
@@ -196,7 +195,7 @@ class CompetitionControllerTest {
 
             requestDTO.setNom("");
 
-            mockMvc.perform(post("/api/v1/competitions")
+            mockMvc.perform(post("/api/v2/competitions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isBadRequest())
@@ -210,7 +209,7 @@ class CompetitionControllerTest {
 
             requestDTO.setStatut(null);
 
-            mockMvc.perform(post("/api/v1/competitions")
+            mockMvc.perform(post("/api/v2/competitions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isBadRequest())
@@ -221,7 +220,7 @@ class CompetitionControllerTest {
         @Test
         @DisplayName("doit retourner 400 quand le corps est vide")
         void shouldReturn400_whenBodyIsEmpty() throws Exception {
-            mockMvc.perform(post("/api/v1/competitions")
+            mockMvc.perform(post("/api/v2/competitions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}"))
                     .andExpect(status().isBadRequest())
@@ -232,7 +231,7 @@ class CompetitionControllerTest {
         @Test
         @DisplayName("doit retourner 400 quand le corps est manquant")
         void shouldReturn400_whenBodyIsMissed() throws Exception {
-            mockMvc.perform(post("/api/v1/competitions")
+            mockMvc.perform(post("/api/v2/competitions")
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("Bad Request"))
@@ -247,7 +246,7 @@ class CompetitionControllerTest {
                     .thenThrow(new DuplicateResourceException(
                             "Une compétition avec le nom '100m Hommes' existe déjà"));
 
-            mockMvc.perform(post("/api/v1/competitions")
+            mockMvc.perform(post("/api/v2/competitions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isConflict())
@@ -257,7 +256,7 @@ class CompetitionControllerTest {
     }
 
     @Nested
-    @DisplayName("PUT /api/v1/competitions/{id}")
+    @DisplayName("PUT /api/v2/competitions/{id}")
     class Update {
 
         @Test
@@ -274,7 +273,7 @@ class CompetitionControllerTest {
 
             requestDTO.setStatut(StatusCompetition.EN_COURS);
 
-            mockMvc.perform(put("/api/v1/competitions/1")
+            mockMvc.perform(put("/api/v2/competitions/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isOk())
@@ -288,7 +287,7 @@ class CompetitionControllerTest {
             when(writableService.update(eq(99L), any()))
                     .thenThrow(new ResourceNotFoundException("Compétition non trouvée avec l'id: 99"));
 
-            mockMvc.perform(put("/api/v1/competitions/99")
+            mockMvc.perform(put("/api/v2/competitions/99")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDTO)))
                     .andExpect(status().isNotFound());
@@ -296,7 +295,7 @@ class CompetitionControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /api/v1/competitions/{id}")
+    @DisplayName("DELETE /api/v2/competitions/{id}")
     class Delete {
 
         @Test
@@ -305,7 +304,7 @@ class CompetitionControllerTest {
 
             doNothing().when(writableService).delete(1L);
 
-            mockMvc.perform(delete("/api/v1/competitions/1"))
+            mockMvc.perform(delete("/api/v2/competitions/1"))
                     .andExpect(status().isNoContent());
 
             verify(writableService, times(1)).delete(1L);
@@ -318,7 +317,7 @@ class CompetitionControllerTest {
             doThrow(new ResourceNotFoundException("Compétition non trouvée avec l'id: 99"))
                     .when(writableService).delete(99L);
 
-            mockMvc.perform(delete("/api/v1/competitions/99"))
+            mockMvc.perform(delete("/api/v2/competitions/99"))
                     .andExpect(status().isNotFound());
         }
     }

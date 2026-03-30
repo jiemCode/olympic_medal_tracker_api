@@ -27,6 +27,10 @@ import com.fleety.olympics.service.interfaces.WritableService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Gère les opérations CRUD sur les athlètes
+ * (chemin racine : {@code ${api.version}/athletes}).
+ */
 @RestController
 @RequestMapping("${api.version}/athletes")
 @RequiredArgsConstructor
@@ -36,6 +40,15 @@ public class AthleteController {
     private final WritableService<AthleteResponseDTO, AthleteRequestDTO> writableService;
     private final Filterable<AthleteResponseDTO> filterable;
 
+    /**
+     * Liste paginée des athlètes avec tri dynamique.
+     *
+     * @param page numéro de page (0-indexé).
+     * @param size nombre d'athlètes par page.
+     * @param sortBy champ de tri (ex. {@code nom}, {@code discipline}).
+     * @param direction sens du tri : {@code asc} (défaut) ou {@code desc}.
+     * @return une page d'athlètes.
+     */
     @GetMapping
     public PageResponseDTO<AthleteResponseDTO> getAll(
             @RequestParam(defaultValue = "0")   int page,
@@ -51,27 +64,57 @@ public class AthleteController {
         return readableService.getAll(pageable);
     }
 
+    /**
+     * Détail d'un athlète par identifiant.
+     *
+     * @param id identifiant de l'athlète.
+     * @return le profil d'athlète correspondant.
+     */
     @GetMapping("/{id}")
     public AthleteResponseDTO getById(@PathVariable Long id) {
         return readableService.getById(id);
     }
 
+    /**
+     * Liste les athlètes d'un pays donné.
+     *
+     * @param paysId identifiant du pays.
+     * @return les athlètes rattachés à ce pays.
+     */
     @GetMapping("/pays/{paysId}")
     public List<AthleteResponseDTO> getByPays(@PathVariable Long paysId) {
         return filterable.getByPays(paysId);
     }
 
+    /**
+     * Crée un nouvel athlète.
+     *
+     * @param dto payload validé contenant identité, discipline et pays.
+     * @return l'athlète créé.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public AthleteResponseDTO create(@Valid @RequestBody AthleteRequestDTO dto) {
         return writableService.create(dto);
     }
 
+    /**
+     * Met à jour un athlète existant.
+     *
+     * @param id identifiant de l'athlète à mettre à jour.
+     * @param dto nouvelles valeurs validées.
+     * @return l'athlète mis à jour.
+     */
     @PutMapping("/{id}")
     public AthleteResponseDTO update(@PathVariable Long id, @Valid @RequestBody AthleteRequestDTO dto) {
         return writableService.update(id, dto);
     }
 
+    /**
+     * Supprime un athlète.
+     *
+     * @param id identifiant de l'athlète à supprimer.
+     */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {

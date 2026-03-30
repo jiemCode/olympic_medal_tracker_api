@@ -24,6 +24,10 @@ import com.fleety.olympics.service.interfaces.WritableService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Expose les endpoints CRUD pour les pays participants
+ * (chemin racine : {@code ${api.version}/pays}).
+ */
 @RestController
 @RequestMapping("${api.version}/pays")
 @RequiredArgsConstructor
@@ -32,6 +36,15 @@ public class PaysController {
     private final ReadableService<PaysResponseDTO> readableService;
     private final WritableService<PaysResponseDTO, PaysRequestDTO> writableService;
 
+    /**
+     * Liste paginée des pays avec tri configurable.
+     *
+     * @param page numéro de page (0-indexé).
+     * @param size nombre de pays par page.
+     * @param sortBy champ de tri (ex. {@code nom}, {@code code}).
+     * @param direction sens du tri : {@code asc} (défaut) ou {@code desc}.
+     * @return une page de pays.
+     */
     @GetMapping
     public PageResponseDTO<PaysResponseDTO> getAll(
             @RequestParam(defaultValue = "0")   int page,
@@ -47,22 +60,46 @@ public class PaysController {
         return readableService.getAll(pageable);
     }
 
+    /**
+     * Détail d'un pays.
+     *
+     * @param id identifiant du pays.
+     * @return le pays correspondant.
+     */
     @GetMapping("/{id}")
     public PaysResponseDTO getById(@PathVariable Long id) {
         return readableService.getById(id);
     }
 
+    /**
+     * Crée un pays (code ISO unique sur 2-3 caractères).
+     *
+     * @param dto payload validé du pays à créer.
+     * @return le pays créé.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PaysResponseDTO create(@Valid @RequestBody PaysRequestDTO dto) {
         return writableService.create(dto);
     }
 
+    /**
+     * Met à jour un pays existant.
+     *
+     * @param id identifiant du pays à modifier.
+     * @param dto nouvelles valeurs validées.
+     * @return le pays mis à jour.
+     */
     @PutMapping("/{id}")
     public PaysResponseDTO update(@PathVariable Long id, @Valid @RequestBody PaysRequestDTO dto) {
         return writableService.update(id, dto);
     }
 
+    /**
+     * Supprime un pays.
+     *
+     * @param id identifiant du pays à supprimer.
+     */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
