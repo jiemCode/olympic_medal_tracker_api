@@ -1,0 +1,701 @@
+diff --git a/src/main/java/com/fleety/olympics/security/config/AdminInitializer.java b/src/main/java/com/fleety/olympics/security/config/AdminInitializer.java
+new file mode 100644
+index 0000000..a232a23
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/config/AdminInitializer.java
+@@ -0,0 +1,46 @@
++package com.fleety.olympics.security.config;
++
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.boot.CommandLineRunner;
++import org.springframework.security.crypto.password.PasswordEncoder;
++import org.springframework.stereotype.Component;
++
++import com.fleety.olympics.security.model.Role;
++import com.fleety.olympics.security.model.User;
++import com.fleety.olympics.security.repository.UserRepository;
++
++import lombok.RequiredArgsConstructor;
++
++@Component
++@RequiredArgsConstructor
++public class AdminInitializer implements CommandLineRunner {
++
++    private static final Logger LOGGER = LoggerFactory.getLogger(AdminInitializer.class);
++
++    private final UserRepository userRepository;
++    private final PasswordEncoder passwordEncoder;
++
++    @Value("${app.admin.username:admin}")
++    private String adminUsername;
++
++    @Value("${app.admin.password:admin123}")
++    private String adminPassword;
++
++    @Override
++    public void run(String... args) {
++        if (userRepository.existsByUsername(adminUsername)) {
++            return;
++        }
++
++        User admin = User.builder()
++                .username(adminUsername)
++                .password(passwordEncoder.encode(adminPassword))
++                .role(Role.ADMIN)
++                .build();
++
++        userRepository.save(admin);
++        LOGGER.info("Compte admin initialisé (username: {})", adminUsername);
++    }
++}
+diff --git a/src/main/java/com/fleety/olympics/security/config/JwtAuthenticationFilter.java b/src/main/java/com/fleety/olympics/security/config/JwtAuthenticationFilter.java
+new file mode 100644
+index 0000000..8fef982
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/config/JwtAuthenticationFilter.java
+@@ -0,0 +1,65 @@
++package com.fleety.olympics.security.config;
++
++import java.io.IOException;
++
++import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
++import org.springframework.security.core.context.SecurityContextHolder;
++import org.springframework.security.core.userdetails.UserDetails;
++import org.springframework.security.core.userdetails.UserDetailsService;
++import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
++import org.springframework.stereotype.Component;
++import org.springframework.web.filter.OncePerRequestFilter;
++
++import com.fleety.olympics.security.service.JwtService;
++
++import jakarta.servlet.FilterChain;
++import jakarta.servlet.ServletException;
++import jakarta.servlet.http.HttpServletRequest;
++import jakarta.servlet.http.HttpServletResponse;
++import lombok.RequiredArgsConstructor;
++
++@Component
++@RequiredArgsConstructor
++public class JwtAuthenticationFilter extends OncePerRequestFilter {
++
++    private final JwtService jwtService;
++    private final UserDetailsService userDetailsService;
++
++    @Override
++    protected void doFilterInternal(HttpServletRequest request,
++                                    HttpServletResponse response,
++                                    FilterChain filterChain) throws ServletException, IOException {
++
++        String header = request.getHeader("Authorization");
++        if (header == null || !header.startsWith("Bearer ")) {
++            filterChain.doFilter(request, response);
++            return;
++        }
++
++        String token = header.substring(7);
++        String username;
++
++        try {
++            username = jwtService.extractUsername(token);
++        } catch (Exception ex) {
++            filterChain.doFilter(request, response);
++            return;
++        }
++
++        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
++            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
++
++            if (jwtService.isTokenValid(token, userDetails)) {
++                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
++                        userDetails,
++                        null,
++                        userDetails.getAuthorities()
++                );
++                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
++                SecurityContextHolder.getContext().setAuthentication(authToken);
++            }
++        }
++
++        filterChain.doFilter(request, response);
++    }
++}
+diff --git a/src/main/java/com/fleety/olympics/security/config/RestAccessDeniedHandler.java b/src/main/java/com/fleety/olympics/security/config/RestAccessDeniedHandler.java
+new file mode 100644
+index 0000000..00934ba
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/config/RestAccessDeniedHandler.java
+@@ -0,0 +1,38 @@
++package com.fleety.olympics.security.config;
++
++import java.io.IOException;
++
++import org.springframework.http.HttpStatus;
++import org.springframework.security.access.AccessDeniedException;
++import org.springframework.security.web.access.AccessDeniedHandler;
++import org.springframework.stereotype.Component;
++
++import com.fleety.olympics.exception.ErrorResponse;
++
++import jakarta.servlet.ServletException;
++import jakarta.servlet.http.HttpServletRequest;
++import jakarta.servlet.http.HttpServletResponse;
++import lombok.RequiredArgsConstructor;
++import tools.jackson.databind.ObjectMapper;
++
++@Component
++@RequiredArgsConstructor
++public class RestAccessDeniedHandler implements AccessDeniedHandler {
++
++    private final ObjectMapper mapper;
++
++    @Override
++    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException)
++            throws IOException, ServletException {
++        ErrorResponse body = new ErrorResponse(
++                HttpStatus.FORBIDDEN.value(),
++                HttpStatus.FORBIDDEN.getReasonPhrase(),
++                "Droits insuffisants pour cette ressource",
++                null
++        );
++
++        response.setStatus(HttpStatus.FORBIDDEN.value());
++        response.setContentType("application/json");
++        mapper.writeValue(response.getOutputStream(), body);
++    }
++}
+diff --git a/src/main/java/com/fleety/olympics/security/config/RestAuthenticationEntryPoint.java b/src/main/java/com/fleety/olympics/security/config/RestAuthenticationEntryPoint.java
+new file mode 100644
+index 0000000..ca49477
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/config/RestAuthenticationEntryPoint.java
+@@ -0,0 +1,38 @@
++package com.fleety.olympics.security.config;
++
++import java.io.IOException;
++
++import org.springframework.http.HttpStatus;
++import org.springframework.security.core.AuthenticationException;
++import org.springframework.security.web.AuthenticationEntryPoint;
++import org.springframework.stereotype.Component;
++
++import com.fleety.olympics.exception.ErrorResponse;
++
++import jakarta.servlet.ServletException;
++import jakarta.servlet.http.HttpServletRequest;
++import jakarta.servlet.http.HttpServletResponse;
++import lombok.RequiredArgsConstructor;
++import tools.jackson.databind.ObjectMapper;
++
++@Component
++@RequiredArgsConstructor
++public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
++
++    private final ObjectMapper mapper;
++
++    @Override
++    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException)
++            throws IOException, ServletException {
++        ErrorResponse body = new ErrorResponse(
++                HttpStatus.UNAUTHORIZED.value(),
++                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
++                "Authentification requise",
++                null
++        );
++
++        response.setStatus(HttpStatus.UNAUTHORIZED.value());
++        response.setContentType("application/json");
++        mapper.writeValue(response.getOutputStream(), body);
++    }
++}
+diff --git a/src/main/java/com/fleety/olympics/security/config/SecurityConfig.java b/src/main/java/com/fleety/olympics/security/config/SecurityConfig.java
+new file mode 100644
+index 0000000..bd7b394
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/config/SecurityConfig.java
+@@ -0,0 +1,103 @@
++package com.fleety.olympics.security.config;
++
++import java.util.List;
++
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++import org.springframework.http.HttpMethod;
++import org.springframework.security.authentication.AuthenticationManager;
++import org.springframework.security.authentication.AuthenticationProvider;
++import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
++import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
++import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
++import org.springframework.security.config.annotation.web.builders.HttpSecurity;
++import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
++import org.springframework.security.config.http.SessionCreationPolicy;
++import org.springframework.security.core.userdetails.UserDetailsService;
++import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
++import org.springframework.security.crypto.password.PasswordEncoder;
++import org.springframework.security.web.SecurityFilterChain;
++import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
++import org.springframework.web.cors.CorsConfiguration;
++import org.springframework.web.cors.CorsConfigurationSource;
++import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
++
++import lombok.RequiredArgsConstructor;
++
++@Configuration
++@EnableWebSecurity
++@EnableMethodSecurity
++@RequiredArgsConstructor
++public class SecurityConfig {
++
++    private final JwtAuthenticationFilter jwtAuthenticationFilter;
++    private final RestAuthenticationEntryPoint authenticationEntryPoint;
++    private final RestAccessDeniedHandler accessDeniedHandler;
++    private final UserDetailsService userDetailsService;
++
++    @Value("${api.version}")
++    private String apiVersion;
++
++    @Bean
++    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
++        String apiBase = "/" + apiVersion + "/**";
++        String authBase = "/" + apiVersion + "/auth/**";
++
++        http
++                .csrf(csrf -> csrf.disable())
++                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
++                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
++                .authorizeHttpRequests(auth -> auth
++                        .requestMatchers("/h2-console/**", "/error").permitAll()
++                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
++                        .requestMatchers(HttpMethod.POST, authBase).permitAll()
++                        .requestMatchers(HttpMethod.GET, apiBase).permitAll()
++                        .requestMatchers(HttpMethod.POST, apiBase).hasRole("ADMIN")
++                        .requestMatchers(HttpMethod.PUT, apiBase).hasRole("ADMIN")
++                        .requestMatchers(HttpMethod.PATCH, apiBase).hasRole("ADMIN")
++                        .requestMatchers(HttpMethod.DELETE, apiBase).hasRole("ADMIN")
++                        .anyRequest().authenticated()
++                )
++                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
++                .authenticationProvider(authenticationProvider())
++                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
++                .exceptionHandling(ex -> ex
++                        .authenticationEntryPoint(authenticationEntryPoint)
++                        .accessDeniedHandler(accessDeniedHandler)
++                );
++
++        return http.build();
++    }
++
++    @Bean
++    public AuthenticationProvider authenticationProvider() {
++        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
++        provider.setPasswordEncoder(passwordEncoder());
++        return provider;
++    }
++
++    @Bean
++    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
++        return configuration.getAuthenticationManager();
++    }
++
++    @Bean
++    public PasswordEncoder passwordEncoder() {
++        return new BCryptPasswordEncoder();
++    }
++
++    @Bean
++    public CorsConfigurationSource corsConfigurationSource() {
++        CorsConfiguration configuration = new CorsConfiguration();
++        configuration.setAllowedOrigins(List.of("*"));
++        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
++        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
++        configuration.setExposedHeaders(List.of("Authorization"));
++        configuration.setAllowCredentials(false);
++
++        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
++        source.registerCorsConfiguration("/**", configuration);
++        return source;
++    }
++}
+diff --git a/src/main/java/com/fleety/olympics/security/controller/AuthController.java b/src/main/java/com/fleety/olympics/security/controller/AuthController.java
+new file mode 100644
+index 0000000..7fb7752
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/controller/AuthController.java
+@@ -0,0 +1,35 @@
++package com.fleety.olympics.security.controller;
++
++import org.springframework.http.HttpStatus;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.ResponseStatus;
++import org.springframework.web.bind.annotation.RestController;
++
++import com.fleety.olympics.security.dto.AuthRequest;
++import com.fleety.olympics.security.dto.AuthResponse;
++import com.fleety.olympics.security.dto.RegisterRequest;
++import com.fleety.olympics.security.service.AuthService;
++
++import jakarta.validation.Valid;
++import lombok.RequiredArgsConstructor;
++
++@RestController
++@RequestMapping("${api.version}/auth")
++@RequiredArgsConstructor
++public class AuthController {
++
++    private final AuthService authService;
++
++    @PostMapping("/login")
++    public AuthResponse login(@Valid @RequestBody AuthRequest request) {
++        return authService.login(request);
++    }
++
++    @PostMapping("/register")
++    @ResponseStatus(HttpStatus.CREATED)
++    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
++        return authService.register(request);
++    }
++}
+diff --git a/src/main/java/com/fleety/olympics/security/dto/AuthRequest.java b/src/main/java/com/fleety/olympics/security/dto/AuthRequest.java
+new file mode 100644
+index 0000000..d53c5c6
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/dto/AuthRequest.java
+@@ -0,0 +1,16 @@
++package com.fleety.olympics.security.dto;
++
++import jakarta.validation.constraints.NotBlank;
++import lombok.Getter;
++import lombok.Setter;
++
++@Getter
++@Setter
++public class AuthRequest {
++
++    @NotBlank
++    private String username;
++
++    @NotBlank
++    private String password;
++}
+diff --git a/src/main/java/com/fleety/olympics/security/dto/AuthResponse.java b/src/main/java/com/fleety/olympics/security/dto/AuthResponse.java
+new file mode 100644
+index 0000000..cf90e66
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/dto/AuthResponse.java
+@@ -0,0 +1,15 @@
++package com.fleety.olympics.security.dto;
++
++import lombok.AllArgsConstructor;
++import lombok.Builder;
++import lombok.Getter;
++
++@Getter
++@Builder
++@AllArgsConstructor
++public class AuthResponse {
++    private final String token;
++    private final String tokenType;
++    private final long expiresIn;
++    private final String role;
++}
+diff --git a/src/main/java/com/fleety/olympics/security/dto/RegisterRequest.java b/src/main/java/com/fleety/olympics/security/dto/RegisterRequest.java
+new file mode 100644
+index 0000000..1721c70
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/dto/RegisterRequest.java
+@@ -0,0 +1,16 @@
++package com.fleety.olympics.security.dto;
++
++import jakarta.validation.constraints.NotBlank;
++import lombok.Getter;
++import lombok.Setter;
++
++@Getter
++@Setter
++public class RegisterRequest {
++
++    @NotBlank
++    private String username;
++
++    @NotBlank
++    private String password;
++}
+diff --git a/src/main/java/com/fleety/olympics/security/model/Role.java b/src/main/java/com/fleety/olympics/security/model/Role.java
+new file mode 100644
+index 0000000..3daefd3
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/model/Role.java
+@@ -0,0 +1,6 @@
++package com.fleety.olympics.security.model;
++
++public enum Role {
++    ADMIN,
++    USER
++}
+diff --git a/src/main/java/com/fleety/olympics/security/model/User.java b/src/main/java/com/fleety/olympics/security/model/User.java
+new file mode 100644
+index 0000000..a2084a0
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/model/User.java
+@@ -0,0 +1,71 @@
++package com.fleety.olympics.security.model;
++
++import java.util.Collection;
++import java.util.List;
++
++import org.springframework.security.core.GrantedAuthority;
++import org.springframework.security.core.authority.SimpleGrantedAuthority;
++import org.springframework.security.core.userdetails.UserDetails;
++
++import jakarta.persistence.Column;
++import jakarta.persistence.Entity;
++import jakarta.persistence.EnumType;
++import jakarta.persistence.Enumerated;
++import jakarta.persistence.GeneratedValue;
++import jakarta.persistence.GenerationType;
++import jakarta.persistence.Id;
++import jakarta.persistence.Table;
++import lombok.AllArgsConstructor;
++import lombok.Builder;
++import lombok.Getter;
++import lombok.NoArgsConstructor;
++import lombok.Setter;
++
++@Entity
++@Table(name = "app_users")
++@Getter
++@Setter
++@NoArgsConstructor
++@AllArgsConstructor
++@Builder
++public class User implements UserDetails {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @Column(nullable = false, unique = true)
++    private String username;
++
++    @Column(nullable = false)
++    private String password;
++
++    @Enumerated(EnumType.STRING)
++    @Column(nullable = false)
++    private Role role;
++
++    @Override
++    public Collection<? extends GrantedAuthority> getAuthorities() {
++        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
++    }
++
++    @Override
++    public boolean isAccountNonExpired() {
++        return true;
++    }
++
++    @Override
++    public boolean isAccountNonLocked() {
++        return true;
++    }
++
++    @Override
++    public boolean isCredentialsNonExpired() {
++        return true;
++    }
++
++    @Override
++    public boolean isEnabled() {
++        return true;
++    }
++}
+diff --git a/src/main/java/com/fleety/olympics/security/repository/UserRepository.java b/src/main/java/com/fleety/olympics/security/repository/UserRepository.java
+new file mode 100644
+index 0000000..c5e1c72
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/repository/UserRepository.java
+@@ -0,0 +1,12 @@
++package com.fleety.olympics.security.repository;
++
++import java.util.Optional;
++
++import org.springframework.data.jpa.repository.JpaRepository;
++
++import com.fleety.olympics.security.model.User;
++
++public interface UserRepository extends JpaRepository<User, Long> {
++    Optional<User> findByUsername(String username);
++    boolean existsByUsername(String username);
++}
+diff --git a/src/main/java/com/fleety/olympics/security/service/AuthService.java b/src/main/java/com/fleety/olympics/security/service/AuthService.java
+new file mode 100644
+index 0000000..d7f6a9e
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/service/AuthService.java
+@@ -0,0 +1,66 @@
++package com.fleety.olympics.security.service;
++
++import org.springframework.security.authentication.AuthenticationManager;
++import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
++import org.springframework.security.core.userdetails.UsernameNotFoundException;
++import org.springframework.security.crypto.password.PasswordEncoder;
++import org.springframework.stereotype.Service;
++
++import com.fleety.olympics.exception.DuplicateResourceException;
++import com.fleety.olympics.security.dto.AuthRequest;
++import com.fleety.olympics.security.dto.AuthResponse;
++import com.fleety.olympics.security.dto.RegisterRequest;
++import com.fleety.olympics.security.model.Role;
++import com.fleety.olympics.security.model.User;
++import com.fleety.olympics.security.repository.UserRepository;
++
++import lombok.RequiredArgsConstructor;
++
++@Service
++@RequiredArgsConstructor
++public class AuthService {
++
++    private final UserRepository userRepository;
++    private final PasswordEncoder passwordEncoder;
++    private final AuthenticationManager authenticationManager;
++    private final JwtService jwtService;
++
++    public AuthResponse login(AuthRequest request) {
++        authenticationManager.authenticate(
++                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
++        );
++
++        User user = userRepository.findByUsername(request.getUsername())
++                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur introuvable"));
++
++        String token = jwtService.generateToken(user);
++        return AuthResponse.builder()
++                .token(token)
++                .tokenType("Bearer")
++                .expiresIn(jwtService.getExpirationMs())
++                .role(user.getRole().name())
++                .build();
++    }
++
++    public AuthResponse register(RegisterRequest request) {
++        if (userRepository.existsByUsername(request.getUsername())) {
++            throw new DuplicateResourceException("Nom d'utilisateur déjà utilisé");
++        }
++
++        User user = User.builder()
++                .username(request.getUsername())
++                .password(passwordEncoder.encode(request.getPassword()))
++                .role(Role.USER)
++                .build();
++
++        userRepository.save(user);
++
++        String token = jwtService.generateToken(user);
++        return AuthResponse.builder()
++                .token(token)
++                .tokenType("Bearer")
++                .expiresIn(jwtService.getExpirationMs())
++                .role(user.getRole().name())
++                .build();
++    }
++}
+diff --git a/src/main/java/com/fleety/olympics/security/service/CustomUserDetailsService.java b/src/main/java/com/fleety/olympics/security/service/CustomUserDetailsService.java
+new file mode 100644
+index 0000000..d71191f
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/service/CustomUserDetailsService.java
+@@ -0,0 +1,23 @@
++package com.fleety.olympics.security.service;
++
++import org.springframework.security.core.userdetails.UserDetails;
++import org.springframework.security.core.userdetails.UserDetailsService;
++import org.springframework.security.core.userdetails.UsernameNotFoundException;
++import org.springframework.stereotype.Service;
++
++import com.fleety.olympics.security.repository.UserRepository;
++
++import lombok.RequiredArgsConstructor;
++
++@Service
++@RequiredArgsConstructor
++public class CustomUserDetailsService implements UserDetailsService {
++
++    private final UserRepository userRepository;
++
++    @Override
++    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
++        return userRepository.findByUsername(username)
++                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur introuvable"));
++    }
++}
+diff --git a/src/main/java/com/fleety/olympics/security/service/JwtService.java b/src/main/java/com/fleety/olympics/security/service/JwtService.java
+new file mode 100644
+index 0000000..0053f6e
+--- /dev/null
++++ b/src/main/java/com/fleety/olympics/security/service/JwtService.java
+@@ -0,0 +1,61 @@
++package com.fleety.olympics.security.service;
++
++import java.nio.charset.StandardCharsets;
++import java.util.Date;
++import java.util.Map;
++
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.security.core.userdetails.UserDetails;
++import org.springframework.stereotype.Service;
++
++import io.jsonwebtoken.Claims;
++import io.jsonwebtoken.Jwts;
++import io.jsonwebtoken.SignatureAlgorithm;
++import io.jsonwebtoken.security.Keys;
++
++@Service
++public class JwtService {
++
++    @Value("${jwt.secret}")
++    private String secret;
++
++    @Value("${jwt.expiration}")
++    private long expirationMs;
++
++    public String generateToken(UserDetails userDetails) {
++        Date now = new Date();
++        Date expiry = new Date(now.getTime() + expirationMs);
++
++        return Jwts.builder()
++                .setSubject(userDetails.getUsername())
++                .addClaims(Map.of("role", userDetails.getAuthorities().iterator().next().getAuthority()))
++                .setIssuedAt(now)
++                .setExpiration(expiry)
++                .signWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
++                .compact();
++    }
++
++    public String extractUsername(String token) {
++        return extractAllClaims(token).getSubject();
++    }
++
++    public boolean isTokenValid(String token, UserDetails userDetails) {
++        return extractUsername(token).equals(userDetails.getUsername()) && !isTokenExpired(token);
++    }
++
++    public long getExpirationMs() {
++        return expirationMs;
++    }
++
++    private boolean isTokenExpired(String token) {
++        return extractAllClaims(token).getExpiration().before(new Date());
++    }
++
++    private Claims extractAllClaims(String token) {
++        return Jwts.parserBuilder()
++                .setSigningKey(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))
++                .build()
++                .parseClaimsJws(token)
++                .getBody();
++    }
++}

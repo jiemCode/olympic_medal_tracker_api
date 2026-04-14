@@ -24,8 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,8 +37,8 @@ import com.fleety.olympics.exception.DuplicateResourceException;
 import com.fleety.olympics.exception.GlobalExceptionHandler;
 import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.Competition.StatusCompetition;
-import com.fleety.olympics.service.interfaces.ReadableService;
-import com.fleety.olympics.service.interfaces.WritableService;
+import com.fleety.olympics.security.service.JwtService;
+import com.fleety.olympics.service.CompetitionService;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -55,10 +55,13 @@ class CompetitionControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private ReadableService<CompetitionResponseDTO> readableService;
+    private CompetitionService competitionService;
 
     @MockitoBean
-    private WritableService<CompetitionResponseDTO, CompetitionRequestDTO> writableService;
+    private JwtService jwtService;
+
+    @MockitoBean
+    private UserDetailsService userDetailsService;
 
     private CompetitionResponseDTO responseDTO;
     private CompetitionRequestDTO requestDTO;
@@ -98,7 +101,7 @@ class CompetitionControllerTest {
                     true
             );
 
-            when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
+            when(competitionService.getAll(any(), eq(null))).thenReturn(pageResponse);
 
             mockMvc.perform(get("/api/v2/competitions"))
                     .andExpect(status().isOk())
@@ -126,7 +129,7 @@ class CompetitionControllerTest {
                     true
             );
 
-            when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
+            when(competitionService.getAll(any(), eq(null))).thenReturn(pageResponse);
 
             mockMvc.perform(get("/api/v2/competitions"))
                     .andExpect(status().isOk())
@@ -148,7 +151,7 @@ class CompetitionControllerTest {
         @DisplayName("doit retourner 200 quand la compétition existe")
         void shouldReturn200_whenExists() throws Exception {
 
-            when(readableService.getById(1L)).thenReturn(responseDTO);
+            when(competitionService.getById(1L)).thenReturn(responseDTO);
 
             mockMvc.perform(get("/api/v2/competitions/1"))
                     .andExpect(status().isOk())
@@ -161,7 +164,7 @@ class CompetitionControllerTest {
         @DisplayName("doit retourner 404 quand la compétition n'existe pas")
         void shouldReturn404_whenNotFound() throws Exception {
 
-            when(readableService.getById(99L))
+            when(competitionService.getById(99L))
                     .thenThrow(new ResourceNotFoundException("Compétition non trouvée avec l'id: 99"));
 
             mockMvc.perform(get("/api/v2/competitions/99"))
@@ -179,7 +182,7 @@ class CompetitionControllerTest {
         @DisplayName("doit retourner 201 quand les données sont valides")
         void shouldReturn201_whenValid() throws Exception {
 
-            when(writableService.create(any())).thenReturn(responseDTO);
+            when(competitionService.create(any())).thenReturn(responseDTO);
 
             mockMvc.perform(post("/api/v2/competitions")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -242,7 +245,7 @@ class CompetitionControllerTest {
         @DisplayName("doit retourner 409 quand le nom existe déjà")
         void shouldReturn409_whenNomAlreadyExists() throws Exception {
 
-            when(writableService.create(any()))
+            when(competitionService.create(any()))
                     .thenThrow(new DuplicateResourceException(
                             "Une compétition avec le nom '100m Hommes' existe déjà"));
 
@@ -269,7 +272,7 @@ class CompetitionControllerTest {
                     LocalDate.of(2026, 7, 26),
                     StatusCompetition.EN_COURS
             );
-            when(writableService.update(eq(1L), any())).thenReturn(updated);
+            when(competitionService.update(eq(1L), any())).thenReturn(updated);
 
             requestDTO.setStatut(StatusCompetition.EN_COURS);
 
@@ -284,7 +287,7 @@ class CompetitionControllerTest {
         @DisplayName("doit retourner 404 quand la compétition n'existe pas")
         void shouldReturn404_whenNotFound() throws Exception {
 
-            when(writableService.update(eq(99L), any()))
+            when(competitionService.update(eq(99L), any()))
                     .thenThrow(new ResourceNotFoundException("Compétition non trouvée avec l'id: 99"));
 
             mockMvc.perform(put("/api/v2/competitions/99")
@@ -302,12 +305,12 @@ class CompetitionControllerTest {
         @DisplayName("doit retourner 204 quand la suppression réussit")
         void shouldReturn204_whenDeleted() throws Exception {
 
-            doNothing().when(writableService).delete(1L);
+            doNothing().when(competitionService).delete(1L);
 
             mockMvc.perform(delete("/api/v2/competitions/1"))
                     .andExpect(status().isNoContent());
 
-            verify(writableService, times(1)).delete(1L);
+            verify(competitionService, times(1)).delete(1L);
         }
 
         @Test
@@ -315,7 +318,7 @@ class CompetitionControllerTest {
         void shouldReturn404_whenNotFound() throws Exception {
 
             doThrow(new ResourceNotFoundException("Compétition non trouvée avec l'id: 99"))
-                    .when(writableService).delete(99L);
+                    .when(competitionService).delete(99L);
 
             mockMvc.perform(delete("/api/v2/competitions/99"))
                     .andExpect(status().isNotFound());

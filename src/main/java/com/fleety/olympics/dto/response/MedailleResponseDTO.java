@@ -14,8 +14,11 @@ public class MedailleResponseDTO {
     private Long id;
     private TypeMedaille type;
     private LocalDate dateObtention;
+    private Long athleteId;
     private String athleteNom;
     private String athletePrenom;
+    private Long paysId;
     private String paysNom;
+    private Long competitionId;
     private String competitionNom;
 }

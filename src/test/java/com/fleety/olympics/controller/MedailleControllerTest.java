@@ -25,6 +25,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -36,6 +37,7 @@ import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.exception.GlobalExceptionHandler;
 import com.fleety.olympics.exception.ResourceNotFoundException;
 import com.fleety.olympics.model.Medaille.TypeMedaille;
+import com.fleety.olympics.security.service.JwtService;
 import com.fleety.olympics.service.interfaces.Classifiable;
 import com.fleety.olympics.service.interfaces.MedailleFilterable;
 import com.fleety.olympics.service.interfaces.ReadableService;
@@ -67,16 +69,24 @@ class MedailleControllerTest {
     @MockitoBean
     private MedailleFilterable medailleFilterable;
 
+    @MockitoBean
+    private JwtService jwtService;
+
+    @MockitoBean
+    private UserDetailsService userDetailsService;
+
     private MedailleResponseDTO medailleDTO;
     private MedailleRequestDTO requestDTO;
 
     @BeforeEach
     void setUp() {
         medailleDTO = new MedailleResponseDTO(
-                1L, TypeMedaille.OR,
+                1L,
+                TypeMedaille.OR,
                 LocalDate.of(2026, 8, 5),
-                "Faye Mbaye", "Mbaye",
-                "Sénégal", "Lutte 65kg"
+                1L, "Faye Mbaye", "Mbaye",
+                1L, "Sénégal",
+                1L, "Lutte 65kg"
         );
 
         requestDTO = new MedailleRequestDTO();

@@ -31,9 +31,26 @@ public class CompetitionService implements ReadableService<CompetitionResponseDT
      * @param pageable configuration de pagination/tri.
      * @return page de {@link CompetitionResponseDTO}.
      */
+    @Override
     public PageResponseDTO<CompetitionResponseDTO> getAll(Pageable pageable) {
+        return PageResponseDTO.from(competitionRepository.findAll(pageable).map(this::toResponseDTO));
+    }
+
+    public PageResponseDTO<CompetitionResponseDTO> getAll(Pageable pageable, String statut) {
+        if (statut == null || statut.isBlank()) {
+            return getAll(pageable);
+        }
+
+        Competition.StatusCompetition status;
+        try {
+            status = Competition.StatusCompetition.valueOf(statut.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Statut invalide : " + statut);
+        }
+
         return PageResponseDTO.from(
-            competitionRepository.findAll(pageable).map(this::toResponseDTO)
+                competitionRepository.findByStatut(status, pageable)
+                        .map(this::toResponseDTO)
         );
     }
 

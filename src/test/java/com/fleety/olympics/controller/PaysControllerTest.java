@@ -23,8 +23,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -35,8 +35,8 @@ import com.fleety.olympics.dto.response.PaysResponseDTO;
 import com.fleety.olympics.exception.DuplicateResourceException;
 import com.fleety.olympics.exception.GlobalExceptionHandler;
 import com.fleety.olympics.exception.ResourceNotFoundException;
-import com.fleety.olympics.service.interfaces.ReadableService;
-import com.fleety.olympics.service.interfaces.WritableService;
+import com.fleety.olympics.security.service.JwtService;
+import com.fleety.olympics.service.PaysService;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -53,10 +53,13 @@ class PaysControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private ReadableService<PaysResponseDTO> readableService;
+    private PaysService paysService;
 
     @MockitoBean
-    private WritableService<PaysResponseDTO, PaysRequestDTO> writableService;
+    private JwtService jwtService;
+
+    @MockitoBean
+    private UserDetailsService userDetailsService;
 
     private PaysResponseDTO responseDTO;
     private PaysRequestDTO requestDTO;
@@ -89,7 +92,7 @@ class PaysControllerTest {
                     true
             );
 
-            when(readableService.getAll(any(Pageable.class))).thenReturn(pageResponse);
+            when(paysService.getAll(any())).thenReturn(pageResponse);
 
             mockMvc.perform(get("/api/v2/pays"))
                 .andExpect(status().isOk())
@@ -119,7 +122,7 @@ class PaysControllerTest {
                     true
             );
 
-            when(readableService.getAll(any(Pageable.class))).thenReturn(pageVide);
+            when(paysService.getAll(any())).thenReturn(pageVide);
 
             mockMvc.perform(get("/api/v2/pays"))
                     .andExpect(status().isOk())
@@ -136,7 +139,7 @@ class PaysControllerTest {
         @DisplayName("doit retourner 200 quand le pays existe")
         void shouldReturn200_whenExists() throws Exception {
 
-            when(readableService.getById(1L)).thenReturn(responseDTO);
+            when(paysService.getById(1L)).thenReturn(responseDTO);
 
             mockMvc.perform(get("/api/v2/pays/1"))
                     .andExpect(status().isOk())
@@ -150,7 +153,7 @@ class PaysControllerTest {
         @DisplayName("doit retourner 404 quand le pays n'existe pas")
         void shouldReturn404_whenNotFound() throws Exception {
 
-            when(readableService.getById(99L))
+            when(paysService.getById(99L))
                     .thenThrow(new ResourceNotFoundException("Pays non trouvé avec l'id: 99"));
 
             mockMvc.perform(get("/api/v2/pays/99"))
@@ -168,7 +171,7 @@ class PaysControllerTest {
         @DisplayName("doit retourner 201 quand les données sont valides")
         void shouldReturn201_whenValid() throws Exception {
 
-            when(writableService.create(any())).thenReturn(responseDTO);
+            when(paysService.create(any())).thenReturn(responseDTO);
 
             mockMvc.perform(post("/api/v2/pays")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -224,7 +227,7 @@ class PaysControllerTest {
         @DisplayName("doit retourner 409 quand le code existe déjà")
         void shouldReturn409_whenCodeAlreadyExists() throws Exception {
 
-            when(writableService.create(any()))
+            when(paysService.create(any()))
                     .thenThrow(new DuplicateResourceException("Un pays avec le code 'SEN' existe déjà"));
 
             mockMvc.perform(post("/api/v2/pays")
@@ -245,7 +248,7 @@ class PaysControllerTest {
         @DisplayName("doit retourner 200 quand la mise à jour réussit")
         void shouldReturn200_whenUpdated() throws Exception {
 
-            when(writableService.update(eq(1L), any())).thenReturn(responseDTO);
+            when(paysService.update(eq(1L), any())).thenReturn(responseDTO);
 
             mockMvc.perform(put("/api/v2/pays/1")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -258,7 +261,7 @@ class PaysControllerTest {
         @DisplayName("doit retourner 404 quand le pays n'existe pas")
         void shouldReturn404_whenNotFound() throws Exception {
 
-            when(writableService.update(eq(99L), any()))
+            when(paysService.update(eq(99L), any()))
                     .thenThrow(new ResourceNotFoundException("Pays non trouvé avec l'id: 99"));
 
             mockMvc.perform(put("/api/v2/pays/99")
@@ -277,12 +280,12 @@ class PaysControllerTest {
         @DisplayName("doit retourner 204 quand la suppression réussit")
         void shouldReturn204_whenDeleted() throws Exception {
 
-            doNothing().when(writableService).delete(1L);
+            doNothing().when(paysService).delete(1L);
 
             mockMvc.perform(delete("/api/v2/pays/1"))
                     .andExpect(status().isNoContent());
 
-            verify(writableService, times(1)).delete(1L);
+            verify(paysService, times(1)).delete(1L);
         }
 
         @Test
@@ -290,7 +293,7 @@ class PaysControllerTest {
         void shouldReturn404_whenNotFound() throws Exception {
 
             doThrow(new ResourceNotFoundException("Pays non trouvé avec l'id: 99"))
-                    .when(writableService).delete(99L);
+                    .when(paysService).delete(99L);
 
             mockMvc.perform(delete("/api/v2/pays/99"))
                     .andExpect(status().isNotFound())

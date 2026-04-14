@@ -184,7 +184,7 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
                     long total  = or + argent + bronze;
                     long points = (or * 3) + (argent * 2) + (bronze);
                     return new ClassementResponseDTO(
-                            p.getNom(), p.getCode(), p.getDrapeau(),
+                            p.getId(), p.getNom(), p.getCode(), p.getDrapeau(),
                             or, argent, bronze, total, points
                     );
                 })
@@ -214,7 +214,7 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
         long bronze = medailles.stream().filter(m -> m.getType() == TypeMedaille.BRONZE).count();
 
         return new ClassementResponseDTO(
-                pays.getNom(), pays.getCode(), pays.getDrapeau(),
+                pays.getId(), pays.getNom(), pays.getCode(), pays.getDrapeau(),
                 or, argent, bronze,
                 or + argent + bronze,
                 (or * 3) + (argent * 2) + bronze
@@ -232,9 +232,12 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
                 m.getId(),
                 m.getType(),
                 m.getDateObtention(),
+                m.getAthlete().getId(),
                 m.getAthlete().getNom() + " " + m.getAthlete().getPrenom(),
                 m.getAthlete().getPrenom(),
+                m.getPays().getId(),
                 m.getPays().getNom(),
+                m.getCompetition().getId(),
                 m.getCompetition().getNom()
         );
     }

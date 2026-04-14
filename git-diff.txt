@@ -1,0 +1,266 @@
+diff --git a/pom.xml b/pom.xml
+index 3c8d115..e76cc09 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -46,6 +46,27 @@
+ 			<groupId>org.springframework.boot</groupId>
+ 			<artifactId>spring-boot-starter-validation</artifactId>
+ 		</dependency>
++		<dependency>
++			<groupId>org.springframework.boot</groupId>
++			<artifactId>spring-boot-starter-security</artifactId>
++		</dependency>
++		<dependency>
++			<groupId>io.jsonwebtoken</groupId>
++			<artifactId>jjwt-api</artifactId>
++			<version>0.11.5</version>
++		</dependency>
++		<dependency>
++			<groupId>io.jsonwebtoken</groupId>
++			<artifactId>jjwt-impl</artifactId>
++			<version>0.11.5</version>
++			<scope>runtime</scope>
++		</dependency>
++		<dependency>
++			<groupId>io.jsonwebtoken</groupId>
++			<artifactId>jjwt-jackson</artifactId>
++			<version>0.11.5</version>
++			<scope>runtime</scope>
++		</dependency>
+ 
+ 		<dependency>
+ 			<groupId>org.postgresql</groupId>
+@@ -73,6 +94,11 @@
+ 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+ 			<scope>test</scope>
+ 		</dependency>
++		<dependency>
++			<groupId>org.springframework.security</groupId>
++			<artifactId>spring-security-test</artifactId>
++			<scope>test</scope>
++		</dependency>
+ 	</dependencies>
+ 
+ 	<build>
+diff --git a/src/main/java/com/fleety/olympics/controller/CompetitionController.java b/src/main/java/com/fleety/olympics/controller/CompetitionController.java
+index c234870..2167ebc 100644
+--- a/src/main/java/com/fleety/olympics/controller/CompetitionController.java
++++ b/src/main/java/com/fleety/olympics/controller/CompetitionController.java
+@@ -18,8 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
+ import com.fleety.olympics.dto.request.CompetitionRequestDTO;
+ import com.fleety.olympics.dto.response.CompetitionResponseDTO;
+ import com.fleety.olympics.dto.response.PageResponseDTO;
+-import com.fleety.olympics.service.interfaces.ReadableService;
+-import com.fleety.olympics.service.interfaces.WritableService;
++import com.fleety.olympics.service.CompetitionService;
+ 
+ import jakarta.validation.Valid;
+ import lombok.RequiredArgsConstructor;
+@@ -33,8 +32,7 @@ import lombok.RequiredArgsConstructor;
+ @RequiredArgsConstructor
+ public class CompetitionController {
+ 
+-    private final ReadableService<CompetitionResponseDTO> readableService;
+-    private final WritableService<CompetitionResponseDTO, CompetitionRequestDTO> writableService;
++    private final CompetitionService competitionService;
+ 
+     /**
+      * Liste paginée des compétitions avec tri dynamique.
+@@ -50,14 +48,15 @@ public class CompetitionController {
+             @RequestParam(defaultValue = "0")   int page,
+             @RequestParam(defaultValue = "10")  int size,
+             @RequestParam(defaultValue = "nom") String sortBy,
+-            @RequestParam(defaultValue = "asc") String direction
++            @RequestParam(defaultValue = "asc") String direction,
++            @RequestParam(required = false)     String statut
+     ) {
+         Sort sort = direction.equalsIgnoreCase("desc")
+                 ? Sort.by(sortBy).descending()
+                 : Sort.by(sortBy).ascending();
+ 
+         Pageable pageable = PageRequest.of(page, size, sort);
+-        return readableService.getAll(pageable);
++        return competitionService.getAll(pageable, statut);
+     }
+ 
+     /**
+@@ -68,7 +67,7 @@ public class CompetitionController {
+      */
+     @GetMapping("/{id}")
+     public CompetitionResponseDTO getById(@PathVariable Long id) {
+-        return readableService.getById(id);
++        return competitionService.getById(id);
+     }
+ 
+     /**
+@@ -80,7 +79,7 @@ public class CompetitionController {
+     @PostMapping
+     @ResponseStatus(HttpStatus.CREATED)
+     public CompetitionResponseDTO create(@Valid @RequestBody CompetitionRequestDTO dto) {
+-        return writableService.create(dto);
++        return competitionService.create(dto);
+     }
+ 
+     /**
+@@ -92,7 +91,7 @@ public class CompetitionController {
+      */
+     @PutMapping("/{id}")
+     public CompetitionResponseDTO update(@PathVariable Long id, @Valid @RequestBody CompetitionRequestDTO dto) {
+-        return writableService.update(id, dto);
++        return competitionService.update(id, dto);
+     }
+ 
+     /**
+@@ -103,6 +102,6 @@ public class CompetitionController {
+     @DeleteMapping("/{id}")
+     @ResponseStatus(HttpStatus.NO_CONTENT)
+     public void delete(@PathVariable Long id) {
+-        writableService.delete(id);
++        competitionService.delete(id);
+     }
+ }
+diff --git a/src/main/java/com/fleety/olympics/dto/response/ClassementResponseDTO.java b/src/main/java/com/fleety/olympics/dto/response/ClassementResponseDTO.java
+index f766715..5ed1bd2 100644
+--- a/src/main/java/com/fleety/olympics/dto/response/ClassementResponseDTO.java
++++ b/src/main/java/com/fleety/olympics/dto/response/ClassementResponseDTO.java
+@@ -6,6 +6,7 @@ import lombok.Data;
+ @Data
+ @AllArgsConstructor
+ public class ClassementResponseDTO {
++    private long paysId;
+     private String paysNom;
+     private String paysCode;
+     private String drapeau;
+diff --git a/src/main/java/com/fleety/olympics/exception/GlobalExceptionHandler.java b/src/main/java/com/fleety/olympics/exception/GlobalExceptionHandler.java
+index 238b899..fab404a 100644
+--- a/src/main/java/com/fleety/olympics/exception/GlobalExceptionHandler.java
++++ b/src/main/java/com/fleety/olympics/exception/GlobalExceptionHandler.java
+@@ -1,16 +1,17 @@
+ package com.fleety.olympics.exception;
+ 
++import java.util.HashMap;
++import java.util.Map;
++
+ import org.springframework.http.HttpStatus;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.http.converter.HttpMessageNotReadableException;
++import org.springframework.security.core.AuthenticationException;
+ import org.springframework.validation.FieldError;
+ import org.springframework.web.bind.MethodArgumentNotValidException;
+ import org.springframework.web.bind.annotation.ExceptionHandler;
+ import org.springframework.web.bind.annotation.RestControllerAdvice;
+ 
+-import java.util.HashMap;
+-import java.util.Map;
+-
+ @RestControllerAdvice
+ public class GlobalExceptionHandler {
+ 
+@@ -43,6 +44,11 @@ public class GlobalExceptionHandler {
+         );
+     }
+ 
++    @ExceptionHandler(AuthenticationException.class)
++    public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException ex) {
++        return build(HttpStatus.UNAUTHORIZED, "Identifiants invalides", null);
++    }
++
+     @ExceptionHandler(Exception.class)
+     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
+         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur inattendu", null);
+diff --git a/src/main/java/com/fleety/olympics/repository/CompetitionRepository.java b/src/main/java/com/fleety/olympics/repository/CompetitionRepository.java
+index 0783982..6f567d2 100644
+--- a/src/main/java/com/fleety/olympics/repository/CompetitionRepository.java
++++ b/src/main/java/com/fleety/olympics/repository/CompetitionRepository.java
+@@ -2,6 +2,8 @@ package com.fleety.olympics.repository;
+ 
+ import java.util.List;
+ 
++import org.springframework.data.domain.Page;
++import org.springframework.data.domain.Pageable;
+ import org.springframework.data.jpa.repository.JpaRepository;
+ import org.springframework.stereotype.Repository;
+ 
+@@ -9,7 +11,7 @@ import com.fleety.olympics.model.Competition;
+ 
+ @Repository
+ public interface CompetitionRepository extends JpaRepository<Competition, Long> {
+-    List<Competition> findByStatut(Competition.StatusCompetition statut);
++    Page<Competition> findByStatut(Competition.StatusCompetition statut, Pageable pageable);
+     List<Competition> findByDiscipline(String discipline);
+     boolean existsByNom(String nom);
+ }
+\ No newline at end of file
+diff --git a/src/main/java/com/fleety/olympics/service/CompetitionService.java b/src/main/java/com/fleety/olympics/service/CompetitionService.java
+index 46e4136..b033175 100644
+--- a/src/main/java/com/fleety/olympics/service/CompetitionService.java
++++ b/src/main/java/com/fleety/olympics/service/CompetitionService.java
+@@ -31,9 +31,26 @@ public class CompetitionService implements ReadableService<CompetitionResponseDT
+      * @param pageable configuration de pagination/tri.
+      * @return page de {@link CompetitionResponseDTO}.
+      */
++    @Override
+     public PageResponseDTO<CompetitionResponseDTO> getAll(Pageable pageable) {
++        return PageResponseDTO.from(competitionRepository.findAll(pageable).map(this::toResponseDTO));
++    }
++
++    public PageResponseDTO<CompetitionResponseDTO> getAll(Pageable pageable, String statut) {
++        if (statut == null || statut.isBlank()) {
++            return getAll(pageable);
++        }
++
++        Competition.StatusCompetition status;
++        try {
++            status = Competition.StatusCompetition.valueOf(statut.toUpperCase());
++        } catch (IllegalArgumentException ex) {
++            throw new IllegalArgumentException("Statut invalide : " + statut);
++        }
++
+         return PageResponseDTO.from(
+-            competitionRepository.findAll(pageable).map(this::toResponseDTO)
++                competitionRepository.findByStatut(status, pageable)
++                        .map(this::toResponseDTO)
+         );
+     }
+ 
+diff --git a/src/main/java/com/fleety/olympics/service/MedailleService.java b/src/main/java/com/fleety/olympics/service/MedailleService.java
+index a44c514..5af4b35 100644
+--- a/src/main/java/com/fleety/olympics/service/MedailleService.java
++++ b/src/main/java/com/fleety/olympics/service/MedailleService.java
+@@ -184,7 +184,7 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
+                     long total  = or + argent + bronze;
+                     long points = (or * 3) + (argent * 2) + (bronze);
+                     return new ClassementResponseDTO(
+-                            p.getNom(), p.getCode(), p.getDrapeau(),
++                            p.getId(), p.getNom(), p.getCode(), p.getDrapeau(),
+                             or, argent, bronze, total, points
+                     );
+                 })
+@@ -214,7 +214,7 @@ public class MedailleService implements ReadableService<MedailleResponseDTO>, Wr
+         long bronze = medailles.stream().filter(m -> m.getType() == TypeMedaille.BRONZE).count();
+ 
+         return new ClassementResponseDTO(
+-                pays.getNom(), pays.getCode(), pays.getDrapeau(),
++                pays.getId(), pays.getNom(), pays.getCode(), pays.getDrapeau(),
+                 or, argent, bronze,
+                 or + argent + bronze,
+                 (or * 3) + (argent * 2) + bronze
+diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
+index f020604..ce83224 100644
+--- a/src/main/resources/application.properties
++++ b/src/main/resources/application.properties
+@@ -12,4 +12,12 @@ spring.jpa.show-sql=true
+ 
+ # App
+ server.port=${SERVER_PORT:8080}
+-api.version=${API_VERSION:api/v2}
+\ No newline at end of file
++api.version=${API_VERSION:api/v2}
++
++# Security
++jwt.secret=${JWT_SECRET:OTJiYzRkM2EzNjYxNDNkNjYwOTUwNTM3MTFhZjg0NGYyOTY4ZmZjNTFhOTNiZDk3OTY5MWZiYWE3NTdmYmRiMA==}
++jwt.expiration=${JWT_EXPIRATION:3600000}
++
++# Admin bootstrap
++app.admin.username=${ADMIN_USERNAME:darth}
++app.admin.password=${ADMIN_PASSWORD:vador7}

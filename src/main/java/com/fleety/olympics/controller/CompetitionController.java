@@ -18,8 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fleety.olympics.dto.request.CompetitionRequestDTO;
 import com.fleety.olympics.dto.response.CompetitionResponseDTO;
 import com.fleety.olympics.dto.response.PageResponseDTO;
-import com.fleety.olympics.service.interfaces.ReadableService;
-import com.fleety.olympics.service.interfaces.WritableService;
+import com.fleety.olympics.service.CompetitionService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,8 +32,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CompetitionController {
 
-    private final ReadableService<CompetitionResponseDTO> readableService;
-    private final WritableService<CompetitionResponseDTO, CompetitionRequestDTO> writableService;
+    private final CompetitionService competitionService;
 
     /**
      * Liste paginée des compétitions avec tri dynamique.
@@ -50,14 +48,15 @@ public class CompetitionController {
             @RequestParam(defaultValue = "0")   int page,
             @RequestParam(defaultValue = "10")  int size,
             @RequestParam(defaultValue = "nom") String sortBy,
-            @RequestParam(defaultValue = "asc") String direction
+            @RequestParam(defaultValue = "asc") String direction,
+            @RequestParam(required = false)     String statut
     ) {
         Sort sort = direction.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        return readableService.getAll(pageable);
+        return competitionService.getAll(pageable, statut);
     }
 
     /**
@@ -68,7 +67,7 @@ public class CompetitionController {
      */
     @GetMapping("/{id}")
     public CompetitionResponseDTO getById(@PathVariable Long id) {
-        return readableService.getById(id);
+        return competitionService.getById(id);
     }
 
     /**
@@ -80,7 +79,7 @@ public class CompetitionController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CompetitionResponseDTO create(@Valid @RequestBody CompetitionRequestDTO dto) {
-        return writableService.create(dto);
+        return competitionService.create(dto);
     }
 
     /**
@@ -92,7 +91,7 @@ public class CompetitionController {
      */
     @PutMapping("/{id}")
     public CompetitionResponseDTO update(@PathVariable Long id, @Valid @RequestBody CompetitionRequestDTO dto) {
-        return writableService.update(id, dto);
+        return competitionService.update(id, dto);
     }
 
     /**
@@ -103,6 +102,6 @@ public class CompetitionController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
-        writableService.delete(id);
+        competitionService.delete(id);
     }
 }

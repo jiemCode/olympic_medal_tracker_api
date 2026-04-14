@@ -26,6 +26,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -35,6 +36,7 @@ import com.fleety.olympics.dto.response.AthleteResponseDTO;
 import com.fleety.olympics.dto.response.PageResponseDTO;
 import com.fleety.olympics.exception.GlobalExceptionHandler;
 import com.fleety.olympics.exception.ResourceNotFoundException;
+import com.fleety.olympics.security.service.JwtService;
 import com.fleety.olympics.service.interfaces.Filterable;
 import com.fleety.olympics.service.interfaces.ReadableService;
 import com.fleety.olympics.service.interfaces.WritableService;
@@ -61,6 +63,12 @@ class AthleteControllerTest {
 
     @MockitoBean
     private Filterable<AthleteResponseDTO> filterable;
+
+    @MockitoBean
+    private JwtService jwtService;
+
+    @MockitoBean
+    private UserDetailsService userDetailsService;
 
     private AthleteResponseDTO responseDTO;
     private AthleteRequestDTO requestDTO;
